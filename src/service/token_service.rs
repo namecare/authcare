@@ -1,0 +1,106 @@
+use actix_web::error::BlockingError;
+use sqlx::{Pool, Postgres};
+use std::sync::Arc;
+use thiserror::Error;
+
+use crate::model::user::User;
+use crate::model::user_repository::{UserRepository, UserRepositoryError};
+use crate::model::refresh_token::RefreshToken;
+use crate::model::refresh_token_repository::{RefreshTokenRepository, RefreshTokenRepositoryError};
+use crate::model::session::Session;
+use crate::model::session_repository::{SessionRepository, SessionRepositoryError};
+use crate::utils::crypto::random_secret_token;
+
+#[derive(Error, Debug)]
+pub enum TokenServiceError {
+    #[error("Refresh Token not found")]
+    RefreshTokenNotFound,
+
+    #[error("User not found")]
+    UserNotFound,
+
+    #[error("Internal Error")]
+    InternalError,
+
+    #[error("Internal data store error")]
+    InternalDbError(#[from] RefreshTokenRepositoryError),
+
+    #[error("Internal blocking error")]
+    InternalBlockingError(#[from] BlockingError),
+
+    #[error("Internal JWT error")]
+    InternalJWTError(#[from] jsonwebtoken::errors::Error),
+
+    #[error("Internal user store error")]
+    InternalUserRepositoryError(#[from] UserRepositoryError),
+
+    #[error("Internal session store error")]
+    InternalSessionRepositoryError(#[from] SessionRepositoryError),
+}
+
+#[derive(Clone)]
+pub struct TokenService {
+    refresh_token_repository: Arc<dyn RefreshTokenRepository + Send + Sync>,
+    user_repository: Arc<dyn UserRepository + Send + Sync>,
+    session_repository: Arc<dyn SessionRepository + Send + Sync>,
+    db: Pool<Postgres>,
+}
+
+impl TokenService {
+    pub fn new(
+        refresh_token_repository: Arc<dyn RefreshTokenRepository + Send + Sync>,
+        user_repository: Arc<dyn UserRepository + Send + Sync>,
+        session_repository: Arc<dyn SessionRepository + Send + Sync>,
+        db: Pool<Postgres>,
+    ) -> Self {
+        Self {
+            refresh_token_repository: refresh_token_repository.clone(),
+            user_repository: user_repository.clone(),
+            session_repository: session_repository.clone(),
+            db: db.clone(),
+        }
+    }
+
+    pub async fn issue_refresh_token(
+        &self,
+        user: &User,
+    ) -> Result<RefreshToken, TokenServiceError> {
+        let session = Session::new(user.id);
+        let session = self.session_repository.add(session).await?;
+
+        let refresh_token = self.generate_refresh_token(user.id, session.id);
+        self.refresh_token_repository
+            .add(refresh_token)
+            .await
+            .map_err(TokenServiceError::InternalDbError)
+    }
+
+    pub async fn swap_refresh_token(
+        &self,
+        refresh_token: &str,
+    ) -> Result<RefreshToken, TokenServiceError> {
+        let refresh_token = self.refresh_token_repository.find(refresh_token).await?;
+
+        let _session = self
+            .session_repository
+            .get(refresh_token.session_id)
+            .await?;
+        //TODO: check whether session is still valid?
+
+        let user_uuid = refresh_token.user_id;
+        let user = self.user_repository.get(&user_uuid).await?;
+
+        //TODO: check whether the refresh_token is valid (Revoked). If revoked, check the expirational data (issue_at + lifetime). Issue new one if not expired
+        //TODO: check whether the user is banned or not
+
+        let new_refresh_token = self.generate_refresh_token(user.id, refresh_token.session_id);
+        self.refresh_token_repository
+            .add(new_refresh_token)
+            .await
+            .map_err(TokenServiceError::InternalDbError)
+    }
+
+    fn generate_refresh_token(&self, user_id: uuid::Uuid, session_id: uuid::Uuid) -> RefreshToken {
+        RefreshToken::new(user_id, session_id, random_secret_token(64))
+    }
+}
