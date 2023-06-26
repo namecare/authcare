@@ -23,14 +23,12 @@ pub enum AccountServiceError {
 #[derive(Clone)]
 pub struct UserService {
     user_repository: Arc<dyn UserRepository + Send + Sync>,
-    db: Pool<Postgres>,
 }
 
 impl UserService {
-    pub fn new(user_repository: Arc<dyn UserRepository + Send + Sync>, db: Pool<Postgres>) -> Self {
+    pub fn new(user_repository: Arc<dyn UserRepository + Send + Sync>) -> Self {
         UserService {
-            user_repository: user_repository.clone(),
-            db: db.clone(),
+            user_repository: user_repository.clone()
         }
     }
 

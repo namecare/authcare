@@ -53,12 +53,11 @@ async fn main() -> std::io::Result<()> {
     let token_service = TokenService::new(
         refresh_token_repo.clone(),
         account_repo.clone(),
-        session_repo.clone(),
-        pool.clone(),
+        session_repo.clone()
     );
 
-    let auth_service = AuthService::new(account_repo.clone(), pool.clone());
-    let user_service = UserService::new(account_repo.clone(), pool.clone());
+    let auth_service = AuthService::new(account_repo.clone());
+    let user_service = UserService::new(account_repo.clone());
     let session_service = SessionService::new(session_repo.clone());
 
     let token_service_data = web::Data::new(token_service);
@@ -82,10 +81,10 @@ async fn main() -> std::io::Result<()> {
 
 pub fn configure_routes(config: &mut web::ServiceConfig) {
     let scope = web::scope("/api/v1")
-        .service(crate::api::controller::signup_handler)
-        .service(crate::api::controller::token_password_handler)
-        .service(crate::api::controller::token_refresh_handler)
-        .service(crate::api::controller::signout_handler);
+        .service(api::controller::signup_handler)
+        .service(api::controller::token_password_handler)
+        .service(api::controller::token_refresh_handler)
+        .service(api::controller::signout_handler);
 
     config.service(scope);
 }

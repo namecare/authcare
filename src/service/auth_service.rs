@@ -31,18 +31,15 @@ pub enum AuthServiceError {
 
 #[derive(Clone)]
 pub struct AuthService {
-    account_repository: Arc<dyn UserRepository + Send + Sync>,
-    db: Pool<Postgres>,
+    account_repository: Arc<dyn UserRepository + Send + Sync + 'static>,
 }
 
 impl AuthService {
     pub fn new(
-        account_repository: Arc<dyn UserRepository + Send + Sync>,
-        db: Pool<Postgres>,
+        account_repository: Arc<dyn UserRepository + Send + Sync + 'static>
     ) -> Self {
         AuthService {
-            account_repository: account_repository.clone(),
-            db: db.clone(),
+            account_repository
         }
     }
 

@@ -40,24 +40,21 @@ pub enum TokenServiceError {
 
 #[derive(Clone)]
 pub struct TokenService {
-    refresh_token_repository: Arc<dyn RefreshTokenRepository + Send + Sync>,
-    user_repository: Arc<dyn UserRepository + Send + Sync>,
-    session_repository: Arc<dyn SessionRepository + Send + Sync>,
-    db: Pool<Postgres>,
+    refresh_token_repository: Arc<dyn RefreshTokenRepository + Send + Sync + 'static>,
+    user_repository: Arc<dyn UserRepository + Send + Sync + 'static>,
+    session_repository: Arc<dyn SessionRepository + Send + Sync + 'static>,
 }
 
 impl TokenService {
     pub fn new(
-        refresh_token_repository: Arc<dyn RefreshTokenRepository + Send + Sync>,
-        user_repository: Arc<dyn UserRepository + Send + Sync>,
-        session_repository: Arc<dyn SessionRepository + Send + Sync>,
-        db: Pool<Postgres>,
+        refresh_token_repository: Arc<dyn RefreshTokenRepository + Send + Sync + 'static>,
+        user_repository: Arc<dyn UserRepository + Send + Sync + 'static>,
+        session_repository: Arc<dyn SessionRepository + Send + Sync + 'static>,
     ) -> Self {
         Self {
-            refresh_token_repository: refresh_token_repository.clone(),
-            user_repository: user_repository.clone(),
-            session_repository: session_repository.clone(),
-            db: db.clone(),
+            refresh_token_repository,
+            user_repository,
+            session_repository
         }
     }
 
