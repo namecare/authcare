@@ -13,6 +13,7 @@ use crate::config::AppConfig;
 use crate::model::refresh_token_repository::DbRefreshTokenRepository;
 use crate::model::session_repository::DbSessionRepository;
 use crate::model::user_repository::DbUserRepository;
+use crate::service::session_service::SessionService;
 
 mod api;
 mod config;
@@ -47,27 +48,30 @@ async fn main() -> std::io::Result<()> {
 
     let refresh_token_repo = Arc::new(DbRefreshTokenRepository::new(pool.clone()));
     let account_repo = Arc::new(DbUserRepository::new(pool.clone()));
-    let session_token_repo = Arc::new(DbSessionRepository::new(pool.clone()));
+    let session_repo = Arc::new(DbSessionRepository::new(pool.clone()));
 
     let token_service = TokenService::new(
         refresh_token_repo.clone(),
         account_repo.clone(),
-        session_token_repo.clone(),
+        session_repo.clone(),
         pool.clone(),
     );
 
     let auth_service = AuthService::new(account_repo.clone(), pool.clone());
     let user_service = UserService::new(account_repo.clone(), pool.clone());
+    let session_service = SessionService::new(session_repo.clone());
 
     let token_service_data = web::Data::new(token_service);
     let auth_service_data = web::Data::new(auth_service);
     let user_service_data = web::Data::new(user_service);
+    let session_service_data = web::Data::new(session_service);
 
     HttpServer::new(move || {
         App::new()
             .app_data(auth_service_data.clone())
             .app_data(token_service_data.clone())
             .app_data(user_service_data.clone())
+            .app_data(session_service_data.clone())
             .configure(configure_routes)
             .wrap(Logger::default())
     })

@@ -11,6 +11,7 @@ use crate::service::auth_service::AuthService;
 use crate::model::jwt::{encode_jwt, JWTClaims};
 use crate::model::refresh_token::RefreshToken;
 use crate::model::user::User;
+use crate::service::session_service::SessionService;
 use crate::service::token_service::TokenService;
 use crate::service::user_serivce::UserService;
 
@@ -121,13 +122,23 @@ pub async fn token_refresh_handler(
 
 #[post("/auth/signout")]
 pub async fn signout_handler(
-    _auth_service: web::Data<AuthService>,
-    _token_service: web::Data<TokenService>,
-    _claims: JWTClaims,
+    session_service: web::Data<SessionService>,
+    claims: JWTClaims,
 ) -> impl Responder {
-    HttpResponse::Ok()
+    let Ok(sid) = uuid::Uuid::parse_str(claims.sid.as_str()) else {
+        return HttpResponse::Unauthorized()
+            .json(Response::fail("Invalid JWT claims".to_string() ));
+    };
+
+    let Ok(()) = session_service.revoke_session(&sid).await else {
+        return HttpResponse::InternalServerError()
+            .json(Response::internal_error());
+    };
+
+    HttpResponse::Ok().json(Response::success("Have a good one!"))
 }
 
+// Private
 fn generate_access_token(
     user: &User,
     refresh_token: &RefreshToken,

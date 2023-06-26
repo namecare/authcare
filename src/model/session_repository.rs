@@ -15,7 +15,7 @@ pub trait SessionRepository {
     async fn get(&self, id: uuid::Uuid) -> Result<Session, SessionRepositoryError>;
     async fn add(&self, session: Session) -> Result<Session, SessionRepositoryError>;
     async fn update(&self, session: Session) -> Result<Session, SessionRepositoryError>;
-    async fn delete(&self, id: u64) -> Result<(), SessionRepositoryError>;
+    async fn delete(&self, id: &uuid::Uuid) -> Result<(), SessionRepositoryError>;
 }
 
 pub struct DbSessionRepository {
@@ -56,7 +56,11 @@ impl SessionRepository for DbSessionRepository {
         todo!()
     }
 
-    async fn delete(&self, _id: u64) -> Result<(), SessionRepositoryError> {
-        todo!()
+    async fn delete(&self, id: &uuid::Uuid) -> Result<(), SessionRepositoryError> {
+        let _ = sqlx::query!("DELETE FROM auth_session WHERE id = $1", id)
+            .execute(&self.db)
+            .await?;
+
+        Ok(())
     }
 }
