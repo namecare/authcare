@@ -83,6 +83,7 @@ pub fn configure_routes(config: &mut web::ServiceConfig) {
     let scope = web::scope("/api/v1")
         .service(api::controller::signup_handler)
         .service(api::controller::token_handler)
+        .service(api::controller::token_info_handler)
         .service(api::controller::signout_handler);
 
     config.service(scope);
