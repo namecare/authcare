@@ -10,7 +10,7 @@ pub struct JWTClaims {
     pub exp: i64,
     pub iat: i64,
     pub iss: String,
-    pub sub: String,
+    pub sub: String, //User id
     pub sid: String, //Session id
 }
 

@@ -3,6 +3,8 @@ use validator::Validate;
 
 use crate::model::user::User;
 use crate::constants::TOKEN_TYPE;
+use crate::model::jwt::JWTClaims;
+use crate::model::refresh_token::RefreshToken;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
@@ -72,6 +74,14 @@ pub struct RefreshTokenDTO {
     pub refresh_token: String,
 }
 
+impl From<RefreshToken> for RefreshTokenDTO {
+    fn from(value: RefreshToken) -> Self {
+        Self {
+            refresh_token: value.token,
+        }
+    }
+}
+
 #[derive(Debug, Validate, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AccessTokenDTO {
@@ -96,16 +106,39 @@ impl AccessTokenDTO {
 
 #[derive(Debug, Validate, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct TokenGrantParams {
+    pub email: Option<String>,
+    pub password: Option<String>,
+    pub refresh_token: Option<String>
+}
+
+#[derive(Debug, Validate)]
 pub struct PasswordGrantParams {
     #[validate(email)]
     pub email: String,
     pub password: String,
 }
 
-#[derive(Debug, Validate, Deserialize)]
-#[serde(rename_all = "camelCase")]
+impl From<TokenGrantParams> for PasswordGrantParams {
+    fn from(value: TokenGrantParams) -> Self {
+        Self {
+            email: value.email.expect("Expect email"),
+            password: value.password.expect("Expect password"),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct RefreshTokenGrantParams {
-    pub refresh_token: String,
+    pub refresh_token: String
+}
+
+impl From<TokenGrantParams> for RefreshTokenGrantParams {
+    fn from(value: TokenGrantParams) -> Self {
+        Self {
+            refresh_token: value.refresh_token.expect("Expect refresh token"),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -119,4 +152,16 @@ pub struct TokenQueryDTO {
 pub enum TokenGrantType {
     Password,
     RefreshToken,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenInfoQueryDTO {
+    pub access_token: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TokenInfoDTO {
+    pub jwt_claims: JWTClaims,
+    pub user: UserDTO
 }

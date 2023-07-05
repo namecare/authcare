@@ -82,8 +82,7 @@ async fn main() -> std::io::Result<()> {
 pub fn configure_routes(config: &mut web::ServiceConfig) {
     let scope = web::scope("/api/v1")
         .service(api::controller::signup_handler)
-        .service(api::controller::token_password_handler)
-        .service(api::controller::token_refresh_handler)
+        .service(api::controller::token_handler)
         .service(api::controller::signout_handler);
 
     config.service(scope);

@@ -2,6 +2,10 @@ use actix_web::error::BlockingError;
 use sqlx::{Pool, Postgres};
 use std::sync::Arc;
 use thiserror::Error;
+use uuid::Uuid;
+use crate::api::dto::TokenInfoDTO;
+use crate::config::AppConfig;
+use crate::model::jwt::{decode_jwt, JWTClaims};
 
 use crate::model::user::User;
 use crate::model::user_repository::{UserRepository, UserRepositoryError};
@@ -95,6 +99,17 @@ impl TokenService {
             .add(new_refresh_token)
             .await
             .map_err(TokenServiceError::InternalDbError)
+    }
+
+    pub async fn token_info(&self, access_token: &str) -> Result<TokenInfoDTO, TokenServiceError> {
+        let jwt_claims = decode_jwt(access_token, AppConfig::jwt_secret())?;
+        let user_uuid = Uuid::parse_str(&jwt_claims.sub).map_err(|e| TokenServiceError::InternalError)?;
+        let user = self.user_repository.get(&user_uuid).await?;
+
+        Ok(TokenInfoDTO {
+            jwt_claims,
+            user: user.into()
+        })
     }
 
     fn generate_refresh_token(&self, user_id: uuid::Uuid, session_id: uuid::Uuid) -> RefreshToken {
