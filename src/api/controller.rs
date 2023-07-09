@@ -52,7 +52,7 @@ pub async fn signup_handler(
             .json(Response::internal_error());
     };
 
-    HttpResponse::Ok().json(Response::success(access_token))
+    HttpResponse::Ok().json(access_token)
 }
 
 #[post("/auth/token")]
@@ -82,7 +82,7 @@ pub async fn token_info_handler(
             .json(Response::fail("Invalid token".to_string() ));
     };
 
-    HttpResponse::Ok().json(Response::success(token_info))
+    HttpResponse::Ok().json(token_info)
 }
 
 #[post("/auth/signout")]
@@ -135,7 +135,7 @@ async fn token_password_handler(
             .json(Response::internal_error());
     };
 
-    HttpResponse::Ok().json(Response::success(access_token))
+    HttpResponse::Ok().json(access_token)
 }
 
 async fn token_refresh_handler(
@@ -147,7 +147,7 @@ async fn token_refresh_handler(
             .json(Response::internal_error());
     };
 
-    HttpResponse::Ok().json(Response::success(RefreshTokenDTO::from(access_token)))
+    HttpResponse::Ok().json(RefreshTokenDTO::from(access_token))
 }
 
 fn generate_access_token(

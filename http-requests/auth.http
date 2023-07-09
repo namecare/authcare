@@ -48,3 +48,14 @@ Content-Length: 64
 Connection: Keep-Alive
 User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
 Accept-Encoding: br,deflate,gzip,x-gzip
+
+###
+# Get access token info
+GET http://0.0.0.0:8080/api/v1/domain_name/domain
+Content-Type: application/json
+Content-Length: 64
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{"name":"google.com", "expirationDate": "Wed, 05 Jul 2023 00:35:33 GMT"}
