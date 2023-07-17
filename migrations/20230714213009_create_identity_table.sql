@@ -1,7 +1,7 @@
 -- Add identity table
 
 CREATE TABLE IF NOT EXISTS identity (
-    id text NOT NULL,
+    id text NOT NULL, -- Use identity_data->'metadata'->'sub'
     user_id uuid NOT NULL,
     email text generated always as (lower(identity_data->>'email')) stored,
     identity_data JSONB NOT NULL,
@@ -12,5 +12,6 @@ CREATE TABLE IF NOT EXISTS identity (
     CONSTRAINT identities_pkey PRIMARY KEY (provider, id),
     CONSTRAINT identities_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth_user(id) ON DELETE CASCADE
 );
+
 COMMENT ON TABLE identity is 'Auth: Stores identities associated to a user.';
 CREATE INDEX IF NOT EXISTS identities_user_id_idx ON identity using btree (user_id);
