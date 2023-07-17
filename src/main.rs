@@ -10,6 +10,7 @@ use crate::service::auth_service::AuthService;
 use crate::service::token_service::TokenService;
 use crate::service::user_serivce::UserService;
 use crate::config::AppConfig;
+use crate::model::identity_repository::DbIdentityRepository;
 use crate::model::refresh_token_repository::DbRefreshTokenRepository;
 use crate::model::session_repository::DbSessionRepository;
 use crate::model::user_repository::DbUserRepository;
@@ -21,6 +22,7 @@ mod constants;
 mod model;
 mod service;
 mod utils;
+mod oidc;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -49,6 +51,7 @@ async fn main() -> std::io::Result<()> {
     let refresh_token_repo = Arc::new(DbRefreshTokenRepository::new(pool.clone()));
     let account_repo = Arc::new(DbUserRepository::new(pool.clone()));
     let session_repo = Arc::new(DbSessionRepository::new(pool.clone()));
+    let identity_repo = Arc::new(DbIdentityRepository::new(pool.clone()));
 
     let token_service = TokenService::new(
         refresh_token_repo.clone(),
@@ -57,7 +60,7 @@ async fn main() -> std::io::Result<()> {
     );
 
     let auth_service = AuthService::new(account_repo.clone());
-    let user_service = UserService::new(account_repo.clone());
+    let user_service = UserService::new(account_repo.clone(), identity_repo.clone());
     let session_service = SessionService::new(session_repo.clone());
 
     let token_service_data = web::Data::new(token_service);

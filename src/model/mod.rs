@@ -6,3 +6,5 @@ pub mod session;
 pub mod session_repository;
 pub mod user;
 pub mod user_repository;
+pub mod identity;
+pub mod identity_repository;
