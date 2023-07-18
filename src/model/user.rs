@@ -46,6 +46,18 @@ impl User {
         }
     }
 
+    pub fn new_from_provider(email: &str) -> User {
+        Self {
+            id: uuid::Uuid::new_v4(),
+            email: Some(email.to_string()),
+            encrypted_password: None,
+            banned_until: None,
+            is_super_user: Some(false),
+            confirmed_at: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
     pub fn mock() -> User {
         Self {
             id: uuid::Uuid::new_v4(),

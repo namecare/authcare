@@ -12,6 +12,7 @@ use serde_json::Value;
 use thiserror::Error;
 use crate::model::identity::Identity;
 use crate::model::identity_repository::{IdentityRepository, IdentityRepositoryError};
+use crate::oidc::provider::UserProvidedData;
 
 #[derive(Error, Debug)]
 pub enum UserServiceError {
@@ -20,6 +21,9 @@ pub enum UserServiceError {
 
     #[error("Account not found")]
     AccountNotFound,
+
+    #[error("Invalid External Identity")]
+    InvalidExternalIdentity,
 
     #[error("Internal user data store error")]
     InternalDbError(#[from] UserRepositoryError),
@@ -72,10 +76,140 @@ impl UserService {
         Ok(user)
     }
 
+    pub async fn create_user_from_external_identity(&self, provider_data: &UserProvidedData, provider: &str) -> Result<User, UserServiceError> {
+        let Some(meta) = &provider_data.metadata else {
+            return Err(UserServiceError::InvalidExternalIdentity);
+        };
+
+        let Some(sub) = &meta.subject else {
+            return Err(UserServiceError::InvalidExternalIdentity);
+        };
+
+        let emails: Vec<String> = provider_data.emails.iter().map(|e| e.email.clone() ).collect();
+        let account_linking = self.determine_account_linking(provider, &sub, &emails).await?;
+
+        match account_linking.decision {
+            AccountLinkingDecision::AccountExists => {
+                let Some(user) = account_linking.user else {
+                    return Err(UserServiceError::InvalidExternalIdentity);
+                };
+
+                return Ok(user)
+            }
+            AccountLinkingDecision::CreateAccount => {
+                let user = User::new_from_provider(&emails[0]);
+                let user = self.user_repository.add(user).await?;
+
+                let idenity = Identity::new_from_provider(&user, provider, provider_data);
+                self.identity_repository.add(&idenity).await?;
+
+                return Ok(user)
+            }
+            AccountLinkingDecision::LinkAccount => {
+                todo!()
+            }
+            AccountLinkingDecision::MultipleAccounts => {
+                todo!()
+            }
+        }
+
+        Err(UserServiceError::InvalidExternalIdentity)
+    }
+
     pub async fn find_user(&self, email: &str) -> Result<User, UserServiceError> {
         self.user_repository
             .find_by_email(email)
             .await
             .map_err(UserServiceError::InternalDbError)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum AccountLinkingDecision {
+    AccountExists,
+    CreateAccount,
+    LinkAccount,
+    MultipleAccounts,
+}
+
+#[derive(Debug)]
+struct AccountLinkingResult {
+    decision: AccountLinkingDecision,
+    user: Option<User>,
+    identities: Option<Vec<Identity>>,
+}
+
+impl UserService {
+    async fn determine_account_linking(&self, provider: &str, sub: &str, emails: &[String]) -> Result<AccountLinkingResult, UserServiceError> {
+        let identity = self.identity_repository.find(&sub, provider).await;
+
+        if let Ok(identity) = identity {
+            // Account exists
+            let user = self.user_repository.get(&identity.user_id).await?;
+
+            return Ok(AccountLinkingResult {
+                decision: AccountLinkingDecision::AccountExists,
+                user: Some(user),
+                identities: Some(vec![identity]),
+            });
+        } else if let Err(err) = identity  {
+            match &err {
+                IdentityRepositoryError::InternalDbError(e) => {
+                    if !matches!(e, sqlx::error::Error::RowNotFound) {
+                        return Err(err.into());
+                    }
+                }
+            }
+        }
+
+        let mut similar_identities = Vec::new();
+
+        if !emails.is_empty() {
+            similar_identities = self.identity_repository.find_all_by_email(emails).await?;
+        }
+
+        if similar_identities.is_empty() {
+            // No similar identities, create a new account
+            return Ok(AccountLinkingResult {
+                decision: AccountLinkingDecision::CreateAccount,
+                user: None,
+                identities: None,
+            });
+        }
+
+        let linking_identities = similar_identities.clone();
+
+        // for identity in similar_identities {
+        //     if get_account_linking_domain(&identity.provider) == new_account_linking_domain {
+        //         linking_identities.push(identity);
+        //     }
+        // }
+
+        if linking_identities.is_empty() {
+            return Ok(AccountLinkingResult {
+                decision: AccountLinkingDecision::CreateAccount,
+                user: None,
+                identities: None,
+            });
+        }
+
+        for identity in &linking_identities[1..] {
+            if identity.user_id != linking_identities[0].user_id {
+                // Multiple user accounts in the same linking domain, let the caller decide
+                return Ok(AccountLinkingResult {
+                    decision: AccountLinkingDecision::MultipleAccounts,
+                    user: None,
+                    identities: Some(linking_identities),
+                });
+            }
+        }
+
+        let user = self.user_repository.get(&linking_identities[0].user_id).await?;
+
+        Ok(AccountLinkingResult {
+            decision: AccountLinkingDecision::LinkAccount,
+            user: Some(user),
+            identities: Some(linking_identities),
+        })
     }
 }

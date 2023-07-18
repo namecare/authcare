@@ -61,7 +61,7 @@ Accept-Encoding: br,deflate,gzip,x-gzip
 {"name":"google.com", "expirationDate": "Wed, 05 Jul 2023 00:35:33 GMT"}
 
 ###
-# Siwa
+# Siwa invalid
 POST http://0.0.0.0:8403/api/v1/auth/token?grantType=idToken
 Content-Type: application/json
 Content-Length: 64
@@ -72,6 +72,22 @@ Accept-Encoding: br,deflate,gzip,x-gzip
 {
   "client": "app.namecare.ios",
   "token": "eyJraWQiOiJXNldjT0tCIiwiYWxnIjoiUlMyNTYifQ.eyJpc3MiOiJodHRwczovL2FwcGxlaWQuYXBwbGUuY29tIiwiYXVkIjoiYXBwLm5hbWVjYXJlLmlvcyIsImV4cCI6MTY4OTYyOTk3MSwiaWF0IjoxNjg5NTQzNTcxLCJzdWIiOiIwMDEwOTEuMjJjMGNhNTk0ZDQyNDNjNThlZGYzNTUzNTQwMzgwYjUuMjA0NSIsImNfaGFzaCI6Ik8xeUVwY1dQbExDdXU4NnFrbGtvRmciLCJlbWFpbCI6ImVjcjlwYmhpbXVAcHJpdmF0ZXJlbGF5LmFwcGxlaWQuY29tIiwiZW1haWxfdmVyaWZpZWQiOiJ0cnVlIiwiaXNfcHJpdmF0ZV9lbWFpbCI6InRydWUiLCJhdXRoX3RpbWUiOjE2ODk1NDM1NzEsIm5vbmNlX3N1cHBvcnRlZCI6dHJ1ZX0.WvnvubpILn6cGNeEdh_Jqy18Q9h_OHz0pRnva6ZtAt6POnj_QqTQt1zola8fB5L1FMgbytGEnFxPW9sLuSYXGMEDtAl7-Wex3BSIzTOJBQqpz_HL3zVTInLAlNU36cBPUN0hhhe027T5__Hx1Ptcjwpj9RKpiPGoHRPB_MrhULL2djS_seFcpZaG01-Y5sPiQKpJVVjDECxnvO1OXDtL-FWQLUALAIFLFaIdYwrX0kncmcusHzZEa0DzGG9rfJ-J0Y_jFKmaUkHLpeWuxKV_0H_DQn1zDOy8fuB9MVFIo9FRUjuCxPXXmttT3WyeqCH2_iUM5jmEUkge78V6g68qSw",
+  "provider": "apple",
+  "issuer": "https://appleid.apple.com"
+}
+
+###
+# Siwa
+POST http://0.0.0.0:8403/api/v1/auth/token?grantType=idToken
+Content-Type: application/json
+Content-Length: 64
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "client": "app.namecare.ios",
+  "token": "eyJraWQiOiJmaDZCczhDIiwiYWxnIjoiUlMyNTYifQ.eyJpc3MiOiJodHRwczovL2FwcGxlaWQuYXBwbGUuY29tIiwiYXVkIjoiYXBwLm5hbWVjYXJlLmlvcyIsImV4cCI6MTY4OTcyNjU3MiwiaWF0IjoxNjg5NjQwMTcyLCJzdWIiOiIwMDEwOTEuMjJjMGNhNTk0ZDQyNDNjNThlZGYzNTUzNTQwMzgwYjUuMjA0NSIsImNfaGFzaCI6IjBZbC1fRm9RdHVKUldDTE80eHRPclEiLCJlbWFpbCI6ImVjcjlwYmhpbXVAcHJpdmF0ZXJlbGF5LmFwcGxlaWQuY29tIiwiZW1haWxfdmVyaWZpZWQiOiJ0cnVlIiwiaXNfcHJpdmF0ZV9lbWFpbCI6InRydWUiLCJhdXRoX3RpbWUiOjE2ODk2NDAxNzIsIm5vbmNlX3N1cHBvcnRlZCI6dHJ1ZX0.B9eI-4n2gU2z2elrYx6o41dWcI-pm7CmQig9nxTsvFi_7UYHM1FzwD_7UeLnRGsEtOtiUveZkZ4s2wdcAfQg1DE174P1Uhb0EbDQmXyl4qD_Ufuev6K10YpFuE15902UmAGVv9EyTsb6Kj0ChdIc-mFgMmBOIxZgmw5waafMHObOcZeGgSA2ayrAoJ84ZtQW0h_mfx9yyfVYUW_JolsvHps0LkZENkau7BgjYDxqS9GDeg1-2oolUxAX-9WwTHIyFoY-5-dHdZFhxHSIyMhbi2fRmJfl2I2iNhXqVIXPQq9ZAF1E2fnNcufL8ljmcDD3dTSDsyWlKTF9iiTntWwulg",
   "provider": "apple",
   "issuer": "https://appleid.apple.com"
 }

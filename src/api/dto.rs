@@ -104,12 +104,35 @@ impl AccessTokenDTO {
     }
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenQueryDTO {
+    pub grant_type: TokenGrantType,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum TokenGrantType {
+    Password,
+    RefreshToken,
+    IdToken,
+}
+
 #[derive(Debug, Validate, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenGrantParams {
+    // email & pass
     pub email: Option<String>,
     pub password: Option<String>,
-    pub refresh_token: Option<String>
+
+    // refresh token
+    pub refresh_token: Option<String>,
+
+    // id token
+    pub client: Option<String>,
+    pub token: Option<String>,
+    pub provider: Option<String>,
+    pub issuer: Option<String>,
 }
 
 #[derive(Debug, Validate)]
@@ -141,17 +164,25 @@ impl From<TokenGrantParams> for RefreshTokenGrantParams {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
-pub struct TokenQueryDTO {
-    pub grant_type: TokenGrantType,
+pub struct IdTokenGrantParams {
+    pub client: String,
+    pub token: String,
+    pub provider: String,
+    pub issuer: String
+
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub enum TokenGrantType {
-    Password,
-    RefreshToken,
+impl From<TokenGrantParams> for IdTokenGrantParams {
+    fn from(value: TokenGrantParams) -> Self {
+        Self {
+            client: value.client.expect("Expect clien"),
+            token: value.token.expect("Expect token"),
+            provider: value.provider.expect("Expect provider"),
+            issuer: value.issuer.expect("Expect issuer"),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]

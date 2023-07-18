@@ -92,7 +92,7 @@ impl TokenService {
         let user = self.user_repository.get(&user_uuid).await?;
 
         //TODO: check whether the refresh_token is valid (Revoked). If revoked, check the expirational data (issue_at + lifetime). Issue new one if not expired
-        //TODO: check whether the user is banned or not
+        //TODO(feat):   check whether the user is banned or not
 
         let new_refresh_token = self.generate_refresh_token(user.id, refresh_token.session_id);
         self.refresh_token_repository
