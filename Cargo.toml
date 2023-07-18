@@ -12,6 +12,9 @@ tokio = { version = "1.28.2", features = ["full"] }
 actix-web = "4.3.1"
 actix-web-httpauth = "0.8.0"
 jsonwebtoken = "8.3.0"
+josekit = "0.8.3"
+openidconnect = { version = "3.3.0", features = ["accept-string-booleans"] }
+reqwest = "0.11.18"
 
 # Serialization
 serde = "1.0.164"
@@ -28,6 +31,7 @@ chrono = { version = "0.4.26", features = ["serde"] }
 validator = { version = "0.16.1", features = ["derive"] }
 async-trait = "0.1.68"
 thiserror = "1.0.40"
+lazy_static = "1.4.0"
 
 # Crypto
 argon2 = "0.5.0"

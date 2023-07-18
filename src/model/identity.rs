@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sqlx::types::{JsonRawValue, JsonValue};
 use crate::model::user::User;
+use crate::oidc::provider::UserProvidedData;
 
 #[allow(non_snake_case)]
 #[derive(Debug, Deserialize, sqlx::FromRow, Serialize, Clone)]
@@ -34,6 +35,24 @@ impl Identity {
             user_id: user.id,
             email: Some(email),
             identity_data: JsonValue::Object(map),
+            provider: provider.to_string(),
+            last_sign_in_at: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    pub fn new_from_provider(user: &User, provider: &str, provider_data: &UserProvidedData) -> Self {
+        let meta = provider_data.metadata.as_ref().expect("Expect meta");
+        let providerId = meta.subject.as_ref().expect("Expect sub");
+
+        let email = &provider_data.emails[0].email;
+
+        Identity {
+            id: providerId.clone(),
+            user_id: user.id,
+            email: Some(email.clone()),
+            identity_data: serde_json::to_value(meta).expect("Expect map"),
             provider: provider.to_string(),
             last_sign_in_at: None,
             created_at: None,

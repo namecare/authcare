@@ -14,6 +14,7 @@ pub enum IdentityRepositoryError {
 pub trait IdentityRepository {
     async fn get(&self, id: u64) -> Result<Identity, IdentityRepositoryError>;
     async fn find(&self, id: &str, provider: &str) -> Result<Identity, IdentityRepositoryError>;
+    async fn find_all_by_email(&self, emails: &[String]) -> Result<Vec<Identity>, IdentityRepositoryError>;
     async fn add(&self, identity: &Identity) -> Result<Identity, IdentityRepositoryError>;
     async fn update(&self, identity: Identity) -> Result<Identity, IdentityRepositoryError>;
     async fn delete(&self, id: u64) -> Result<(), IdentityRepositoryError>;
@@ -47,6 +48,16 @@ impl IdentityRepository for DbIdentityRepository {
             .map_err(IdentityRepositoryError::InternalDbError)
     }
 
+    async fn find_all_by_email(&self, emails: &[String]) -> Result<Vec<Identity>, IdentityRepositoryError> {
+        sqlx::query_as!(
+            Identity,
+            r#"SELECT * FROM identity WHERE email = ANY($1::text[])"#,
+            emails
+        )
+            .fetch_all(&self.db)
+            .await
+            .map_err(IdentityRepositoryError::InternalDbError)
+    }
     async fn add(&self, identity: &Identity) -> Result<Identity, IdentityRepositoryError> {
         let query_result = sqlx::query_as!(
             Identity,
