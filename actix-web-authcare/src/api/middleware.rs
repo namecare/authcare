@@ -2,12 +2,13 @@ use std::future::{Future};
 use std::pin::Pin;
 use actix_web::{dev::Payload, FromRequest, HttpRequest};
 use actix_web_httpauth::extractors::bearer::{BearerAuth};
-
+use authcare::config::AppConfig;
+use authcare::model::jwt::{decode_jwt, JWTClaims};
 use crate::api::controller::ControllerError;
-use crate::config::AppConfig;
-use crate::model::jwt::{decode_jwt, JWTClaims};
 
-impl FromRequest for JWTClaims {
+pub struct JWTClaimsDTO(pub JWTClaims);
+
+impl FromRequest for JWTClaimsDTO {
     type Error = ControllerError;
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
 
@@ -17,7 +18,7 @@ impl FromRequest for JWTClaims {
             let bearer = BearerAuth::extract(&req).await?;
             let bearer_token = bearer.token();
             let decoded_token = decode_jwt(bearer_token, AppConfig::jwt_secret())?;
-            Ok(decoded_token)
+            Ok(JWTClaimsDTO(decoded_token))
         })
     }
 }

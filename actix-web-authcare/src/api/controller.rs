@@ -6,17 +6,17 @@ use thiserror::Error;
 use validator::Validate;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-
-use crate::api::dto::{AccessTokenDTO, IdTokenGrantParams, PasswordGrantParams, RefreshTokenDTO, RefreshTokenGrantParams, Response, SignUpDTO, TokenGrantParams, TokenGrantType, TokenInfoQueryDTO, TokenQueryDTO};
-use crate::config::AppConfig;
-use crate::service::auth_service::AuthService;
-use crate::model::jwt::{decode_jwt, encode_jwt, JWTClaims};
-use crate::model::refresh_token::{RefreshToken};
-use crate::model::user::User;
-use crate::oidc::oidc::{IdToken, OidcClient};
-use crate::service::session_service::SessionService;
-use crate::service::token_service::TokenService;
-use crate::service::user_serivce::UserService;
+use authcare::config::AppConfig;
+use authcare::model::jwt::{encode_jwt, JWTClaims};
+use authcare::model::refresh_token::RefreshToken;
+use authcare::model::user::User;
+use authcare::oidc::oidc::OidcClient;
+use authcare::service::auth_service::AuthService;
+use authcare::service::session_service::SessionService;
+use authcare::service::token_service::TokenService;
+use authcare::service::user_serivce::UserService;
+use crate::api::dto::{AccessTokenDTO, IdTokenGrantParams, PasswordGrantParams, RefreshTokenDTO, RefreshTokenGrantParams, Response, SignUpDTO, TokenGrantParams, TokenGrantType, TokenInfoDto, TokenInfoQueryDTO, TokenQueryDTO};
+use crate::api::middleware::JWTClaimsDTO;
 
 #[derive(Error, Debug)]
 pub enum ControllerError {
@@ -89,15 +89,16 @@ pub async fn token_info_handler(
             .json(Response::fail("Invalid token".to_string() ));
     };
 
-    HttpResponse::Ok().json(token_info)
+    let dto: TokenInfoDto = token_info.into();
+    HttpResponse::Ok().json(dto)
 }
 
 #[post("/auth/signout")]
 pub async fn signout_handler(
     session_service: web::Data<SessionService>,
-    claims: JWTClaims,
+    claims: JWTClaimsDTO,
 ) -> impl Responder {
-    let Ok(sid) = uuid::Uuid::parse_str(claims.sid.as_str()) else {
+    let Ok(sid) = uuid::Uuid::parse_str(claims.0.sid.as_str()) else {
         return HttpResponse::Unauthorized()
             .json(Response::fail("Invalid JWT claims".to_string() ));
     };

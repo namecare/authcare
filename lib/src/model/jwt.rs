@@ -29,7 +29,7 @@ impl JWTClaims {
 }
 
 /// Create a json web token (JWT)
-pub(crate) fn encode_jwt(
+pub fn encode_jwt(
     jwt_claims: &JWTClaims,
     secret: String,
 ) -> Result<String, jsonwebtoken::errors::Error> {
@@ -38,7 +38,7 @@ pub(crate) fn encode_jwt(
 }
 
 /// Decode a json web token (JWT)
-pub(crate) fn decode_jwt(
+pub fn decode_jwt(
     token: &str,
     secret: String,
 ) -> Result<JWTClaims, jsonwebtoken::errors::Error> {

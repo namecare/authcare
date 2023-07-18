@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::error::Error;
-use actix_web::error::BlockingError;
 use chrono::{DateTime, Utc};
 use jsonwebtoken::jwk::JwkSet;
 use openidconnect::core::{CoreClient, CoreGenderClaim, CoreIdToken, CoreIdTokenClaims, CoreJsonWebKeyType, CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm, CoreProviderMetadata};
@@ -20,9 +19,6 @@ use crate::oidc::serde_string_bool;
 pub enum OidcError {
     #[error("Verification error")]
     VerificationError(#[from] ClaimsVerificationError),
-
-    #[error("Internal blocking error")]
-    InternalBlockingError(#[from] BlockingError),
 
     #[error("Serialization error")]
     SerdeJsonError(#[from] serde_json::Error)

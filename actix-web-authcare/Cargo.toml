@@ -1,18 +1,24 @@
 [package]
-name = "authcare"
-version = "0.2.3"
+name = "actix-web-authcare"
+version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 
+# Core
+authcare = { path = "../lib/", version = "0.2" }
+
 # Async
 tokio = { version = "1.28.2", features = ["full"] }
 
-# Auth
+# Server
+actix-web = "4.3.1"
+actix-web-httpauth = "0.8.0"
 jsonwebtoken = "8.3.0"
 josekit = "0.8.3"
 openidconnect = { version = "3.3.0", features = ["accept-string-booleans"] }
 reqwest = "0.11.18"
+
 
 # Serialization
 serde = "1.0.164"
