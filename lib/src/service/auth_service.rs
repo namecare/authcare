@@ -1,5 +1,3 @@
-use actix_web::error::BlockingError;
-use actix_web::web;
 use sqlx::{Pool, Postgres};
 use std::sync::Arc;
 
@@ -24,9 +22,6 @@ pub enum AuthServiceError {
 
     #[error("Internal data store error")]
     InternalDbError(#[from] UserRepositoryError),
-
-    #[error("Internal blocking error")]
-    InternalBlockingError(#[from] BlockingError),
 }
 
 #[derive(Clone)]
@@ -52,7 +47,9 @@ impl AuthService {
             return Err(AuthServiceError::AccountNotFound)
         };
 
-        let user = web::block(move || -> Result<User, AuthServiceError> {
+        use tokio::task;
+
+        let user = task::spawn_blocking(move || {
             let Ok(authenticated) = user.authenticate(password.as_str()) else {
                 return Err(AuthServiceError::InvalidCredentials);
             };
@@ -62,8 +59,7 @@ impl AuthService {
             } else {
                 return Err(AuthServiceError::InvalidCredentials);
             }
-        })
-        .await??;
+        }).await.expect("Expect complete")?;
 
         Ok(user)
     }

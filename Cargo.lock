@@ -179,6 +179,7 @@ dependencies = [
  "actix-web-httpauth",
  "argon2",
  "async-trait",
+ "authcare",
  "chrono",
  "dotenv",
  "env_logger",
@@ -343,6 +344,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f28d99ec8bfea296261ca1af174f24225171fea9664ba9003cbebee704810528"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "authcare"
+version = "0.2.3"
+dependencies = [
+ "argon2",
+ "async-trait",
+ "chrono",
+ "dotenv",
+ "env_logger",
+ "josekit",
+ "jsonwebtoken",
+ "lazy_static",
+ "openidconnect",
+ "rand",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "uuid",
+ "validator",
 ]
 
 [[package]]

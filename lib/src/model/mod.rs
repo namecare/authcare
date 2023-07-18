@@ -8,3 +8,4 @@ pub mod user;
 pub mod user_repository;
 pub mod identity;
 pub mod identity_repository;
+pub mod token_info;

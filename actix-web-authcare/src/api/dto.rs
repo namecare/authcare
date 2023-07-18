@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-
-use crate::model::user::User;
-use crate::constants::TOKEN_TYPE;
-use crate::model::jwt::JWTClaims;
-use crate::model::refresh_token::RefreshToken;
+use authcare::constants::TOKEN_TYPE;
+use authcare::model::jwt::JWTClaims;
+use authcare::model::refresh_token::RefreshToken;
+use authcare::model::token_info::TokenInfo;
+use authcare::model::user::User;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
@@ -192,7 +192,16 @@ pub struct TokenInfoQueryDTO {
 }
 
 #[derive(Debug, Serialize)]
-pub struct TokenInfoDTO {
+pub struct TokenInfoDto {
     pub jwt_claims: JWTClaims,
     pub user: UserDTO
+}
+
+impl From<TokenInfo> for TokenInfoDto {
+    fn from(value: TokenInfo) -> Self {
+        Self {
+            jwt_claims: value.jwt_claims,
+            user: value.user.into()
+        }
+    }
 }

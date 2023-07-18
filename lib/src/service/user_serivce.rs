@@ -3,13 +3,12 @@ use crate::model::user::User;
 use crate::model::user_repository::{UserRepository, UserRepositoryError};
 use crate::service::auth_service::AuthServiceError;
 use crate::utils::crypto::hash_password;
-use actix_web::error::BlockingError;
-use actix_web::web;
 use sqlx::{Pool, Postgres};
 use std::sync::Arc;
 use serde_json::map::Values;
 use serde_json::Value;
 use thiserror::Error;
+use tokio::task;
 use crate::model::identity::Identity;
 use crate::model::identity_repository::{IdentityRepository, IdentityRepositoryError};
 use crate::oidc::provider::UserProvidedData;
@@ -30,11 +29,6 @@ pub enum UserServiceError {
 
     #[error("Internal identity data store error")]
     InternalIdentityDbError(#[from] IdentityRepositoryError),
-
-
-    #[error("Internal blocking error")]
-    InternalBlockingError(#[from] BlockingError),
-
 }
 
 #[derive(Clone)]
@@ -61,7 +55,9 @@ impl UserService {
             return Err(UserServiceError::UserExists);
         }
 
-        let hashed_password = web::block(move || hash_password(password.as_str())).await?;
+        let hashed_password = task::spawn_blocking(move || {
+            hash_password(password.as_str())
+        }).await.expect("Expect hashed");
 
         let user = User::new(email, hashed_password);
         let user = self.user_repository.add(user).await?;

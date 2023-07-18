@@ -5,24 +5,17 @@ use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
-
-use crate::service::auth_service::AuthService;
-use crate::service::token_service::TokenService;
-use crate::service::user_serivce::UserService;
-use crate::config::AppConfig;
-use crate::model::identity_repository::DbIdentityRepository;
-use crate::model::refresh_token_repository::DbRefreshTokenRepository;
-use crate::model::session_repository::DbSessionRepository;
-use crate::model::user_repository::DbUserRepository;
-use crate::service::session_service::SessionService;
+use authcare::config::AppConfig;
+use authcare::model::identity_repository::DbIdentityRepository;
+use authcare::model::refresh_token_repository::DbRefreshTokenRepository;
+use authcare::model::session_repository::DbSessionRepository;
+use authcare::model::user_repository::DbUserRepository;
+use authcare::service::auth_service::AuthService;
+use authcare::service::session_service::SessionService;
+use authcare::service::token_service::TokenService;
+use authcare::service::user_serivce::UserService;
 
 mod api;
-mod config;
-mod constants;
-mod model;
-mod service;
-mod utils;
-mod oidc;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

@@ -2,8 +2,6 @@ use crate::model::user::User;
 use crate::model::user_repository::{UserRepository, UserRepositoryError};
 use crate::service::auth_service::AuthServiceError;
 use crate::utils::crypto::hash_password;
-use actix_web::error::BlockingError;
-use actix_web::web;
 use sqlx::{Pool, Postgres};
 use std::sync::Arc;
 use thiserror::Error;
@@ -16,9 +14,6 @@ pub enum SessionServiceError {
 
     #[error("Internal data store error")]
     InternalDbError(#[from] SessionRepositoryError),
-
-    #[error("Internal blocking error")]
-    InternalBlockingError(#[from] BlockingError),
 }
 
 #[derive(Clone)]
