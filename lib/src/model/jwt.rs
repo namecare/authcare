@@ -33,7 +33,7 @@ pub fn encode_jwt(
     jwt_claims: &JWTClaims,
     secret: String,
 ) -> Result<String, jsonwebtoken::errors::Error> {
-    let encoding_key = EncodingKey::from_base64_secret(secret.as_str())?;
+    let encoding_key = EncodingKey::from_secret(secret.as_bytes());
     jsonwebtoken::encode(&Header::default(), jwt_claims, &encoding_key)
 }
 
