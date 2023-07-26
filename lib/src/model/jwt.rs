@@ -7,8 +7,8 @@ use crate::constants::{JWT_AUD_CLAIN, JWT_EXPIRED_IN, JWT_ISS_CLAIN};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JWTClaims {
     pub aud: String,
-    pub exp: i64,
-    pub iat: i64,
+    pub exp: i64, // Expires at
+    pub iat: i64, // Issued at
     pub iss: String,
     pub sub: String, //User id
     pub sid: String, //Session id

@@ -87,17 +87,19 @@ impl From<RefreshToken> for RefreshTokenDTO {
 pub struct AccessTokenDTO {
     pub token: String,
     pub token_type: String,
-    pub expires_in: i64,
+    pub issued_at: i64,
+    pub expires_at: i64,
     pub refresh_token: String,
     pub user: UserDTO,
 }
 
 impl AccessTokenDTO {
-    pub fn new(token: String, expires_in: i64, refresh_token: String, user: UserDTO) -> Self {
+    pub fn new(token: String, expires_at: i64, issued_at: i64, refresh_token: String, user: UserDTO) -> Self {
         Self {
             token,
             token_type: TOKEN_TYPE.to_string(),
-            expires_in,
+            issued_at,
+            expires_at,
             refresh_token,
             user,
         }

@@ -72,7 +72,7 @@ pub async fn token_handler(
 
     match query.grant_type {
         TokenGrantType::Password => return token_password_handler(dto.0.into(), auth_service, token_service).await,
-        TokenGrantType::RefreshToken => return token_refresh_handler(dto.0.into(), token_service).await,
+        TokenGrantType::RefreshToken => return token_refresh_handler(dto.0.into(), token_service, user_service).await,
         TokenGrantType::IdToken => return id_token_handler(dto.0.into(), token_service, user_service).await,
     }
 }
@@ -149,13 +149,24 @@ async fn token_password_handler(
 async fn token_refresh_handler(
     dto: RefreshTokenGrantParams,
     token_service: web::Data<TokenService>,
+    user_service: web::Data<UserService>,
 ) -> HttpResponse {
-    let Ok(access_token) = token_service.swap_refresh_token(dto.refresh_token.as_str()).await else {
+    let Ok(refresh_token) = token_service.swap_refresh_token(dto.refresh_token.as_str()).await else {
         return HttpResponse::InternalServerError()
             .json(Response::internal_error());
     };
 
-    HttpResponse::Ok().json(RefreshTokenDTO::from(access_token))
+    let Ok(user) = user_service.get_user(&refresh_token.user_id).await else {
+        return HttpResponse::InternalServerError()
+            .json(Response::internal_error());
+    };
+
+    let Ok(access_token) = generate_access_token(&user, &refresh_token) else {
+        return HttpResponse::InternalServerError()
+            .json(Response::internal_error());
+    };
+
+    HttpResponse::Ok().json(access_token)
 }
 
 async fn id_token_handler(
@@ -210,6 +221,7 @@ fn generate_access_token(
     Ok(AccessTokenDTO::new(
         encoded_jwt,
         jwt.exp,
+        jwt.iat,
         token,
         user.into(),
     ))
