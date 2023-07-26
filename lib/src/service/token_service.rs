@@ -19,9 +19,6 @@ pub enum TokenServiceError {
     #[error("Refresh Token not found")]
     RefreshTokenNotFound,
 
-    #[error("User not found")]
-    UserNotFound,
-
     #[error("Internal Error")]
     InternalError,
 

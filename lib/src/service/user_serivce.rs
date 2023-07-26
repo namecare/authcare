@@ -112,6 +112,13 @@ impl UserService {
         Err(UserServiceError::InvalidExternalIdentity)
     }
 
+    pub async fn get_user(&self, id: &uuid::Uuid) -> Result<User, UserServiceError> {
+        self.user_repository
+            .get(id)
+            .await
+            .map_err(UserServiceError::InternalDbError)
+    }
+
     pub async fn find_user(&self, email: &str) -> Result<User, UserServiceError> {
         self.user_repository
             .find_by_email(email)
