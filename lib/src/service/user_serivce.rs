@@ -125,6 +125,13 @@ impl UserService {
             .await
             .map_err(UserServiceError::InternalDbError)
     }
+
+    pub async fn delete_user(&self, id: &uuid::Uuid) -> Result<(), UserServiceError> {
+        self.user_repository
+            .delete(id)
+            .await
+            .map_err(UserServiceError::InternalDbError)
+    }
 }
 
 #[derive(Debug, PartialEq)]
