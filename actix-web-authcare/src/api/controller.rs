@@ -1,4 +1,4 @@
-use actix_web::{get, post, web, HttpResponse, Responder, ResponseError, HttpRequest, FromRequest};
+use actix_web::{get, post, web, HttpResponse, Responder, ResponseError, HttpRequest, FromRequest, delete};
 use actix_web::web::Payload;
 use openidconnect::core::CoreClient;
 use openidconnect::Nonce;
@@ -104,6 +104,24 @@ pub async fn signout_handler(
     };
 
     let Ok(()) = session_service.revoke_session(&sid).await else {
+        return HttpResponse::InternalServerError()
+            .json(Response::internal_error());
+    };
+
+    HttpResponse::Ok().json(Response::success("Have a good one!"))
+}
+
+#[delete("/auth/user")]
+pub async fn delete_user_handler(
+    user_service: web::Data<UserService>,
+    claims: JWTClaimsDTO,
+) -> impl Responder {
+    let Ok(uid) = uuid::Uuid::parse_str(claims.0.sub.as_str()) else {
+        return HttpResponse::Unauthorized()
+            .json(Response::fail("Invalid JWT claims".to_string() ));
+    };
+
+    let Ok(()) = user_service.delete_user(&uid).await else {
         return HttpResponse::InternalServerError()
             .json(Response::internal_error());
     };

@@ -1,7 +1,6 @@
 use async_trait::async_trait;
-use sqlx::{PgPool, Row};
+use sqlx::{PgPool, query, Row};
 use thiserror::Error;
-use uuid::Uuid;
 
 use crate::model::user::User;
 
@@ -20,7 +19,7 @@ pub trait UserRepository {
     async fn find_by_email(&self, email: &str) -> Result<User, UserRepositoryError>;
     async fn contains_with_email(&self, email: &str) -> Result<bool, UserRepositoryError>;
     async fn add(&self, account: User) -> Result<User, UserRepositoryError>;
-    async fn delete(&self, user_id: uuid::Uuid) -> Result<(), UserRepositoryError>;
+    async fn delete(&self, user_id: &uuid::Uuid) -> Result<(), UserRepositoryError>;
 }
 
 pub struct DbUserRepository {
@@ -35,7 +34,7 @@ impl DbUserRepository {
 
 #[async_trait]
 impl UserRepository for DbUserRepository {
-    async fn get(&self, user_id: &Uuid) -> Result<User, UserRepositoryError> {
+    async fn get(&self, user_id: &uuid::Uuid) -> Result<User, UserRepositoryError> {
         sqlx::query_as!(User, r#"SELECT * FROM auth_user WHERE id = $1"#, user_id)
             .fetch_one(&self.db)
             .await
@@ -73,7 +72,11 @@ impl UserRepository for DbUserRepository {
         Ok(query_result)
     }
 
-    async fn delete(&self, _user_id: Uuid) -> Result<(), UserRepositoryError> {
+    async fn delete(&self, user_id: &uuid::Uuid) -> Result<(), UserRepositoryError> {
+        let deleted_rows = query!("DELETE FROM auth_user WHERE id = $1", user_id)
+            .execute(&self.db)
+            .await?;
+
         Ok(())
     }
 }
