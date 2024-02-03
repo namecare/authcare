@@ -1,11 +1,6 @@
-use actix_web::{get, post, web, HttpResponse, Responder, ResponseError, HttpRequest, FromRequest, delete};
-use actix_web::web::Payload;
-use openidconnect::core::CoreClient;
-use openidconnect::Nonce;
+use actix_web::{get, post, web, HttpResponse, Responder, ResponseError, delete};
 use thiserror::Error;
 use validator::Validate;
-use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 use authcare::config::AppConfig;
 use authcare::model::jwt::{encode_jwt, JWTClaims};
 use authcare::model::refresh_token::RefreshToken;
@@ -15,7 +10,7 @@ use authcare::service::auth_service::AuthService;
 use authcare::service::session_service::SessionService;
 use authcare::service::token_service::TokenService;
 use authcare::service::user_serivce::UserService;
-use crate::api::dto::{AccessTokenDTO, IdTokenGrantParams, PasswordGrantParams, RefreshTokenDTO, RefreshTokenGrantParams, Response, SignUpDTO, TokenGrantParams, TokenGrantType, TokenInfoDto, TokenInfoQueryDTO, TokenQueryDTO};
+use crate::api::dto::{AccessTokenDTO, IdTokenGrantParams, PasswordGrantParams, RefreshTokenGrantParams, Response, SignUpDTO, TokenGrantParams, TokenGrantType, TokenInfoDto, TokenInfoQueryDTO, TokenQueryDTO};
 use crate::api::middleware::JWTClaimsDTO;
 
 #[derive(Error, Debug)]
@@ -192,8 +187,11 @@ async fn id_token_handler(
     token_service: web::Data<TokenService>,
     user_service: web::Data<UserService>
 ) -> HttpResponse {
+    let Ok(provider) = extract_provider(&dto).await else {
+        return HttpResponse::InternalServerError()
+            .json(Response::internal_error());
+    };
 
-    let provider = extract_provider(&dto).await.expect("Expect client");
     let Ok(claims) = provider.verify(dto.token.as_str(), None) else {
         return HttpResponse::Unauthorized()
             .json(Response::fail("Invalid Credentials".to_string()))
@@ -219,8 +217,8 @@ async fn id_token_handler(
 
 async fn extract_provider(dto: &IdTokenGrantParams) -> Result<OidcClient, ControllerError> {
     if dto.provider == "apple" || dto.issuer == "https://appleid.apple.com" {
-        let externalConfiguration = AppConfig::provider_configuration(&dto.issuer);
-        let oid_client = OidcClient::new(externalConfiguration.issuer.as_str(), externalConfiguration.client_id.as_str()).await;
+        let external_configuration = AppConfig::provider_configuration(&dto.issuer);
+        let oid_client = OidcClient::new(external_configuration.issuer.as_str(), external_configuration.client_id.as_str()).await;
         return Ok(oid_client);
     }
 

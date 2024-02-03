@@ -1,9 +1,8 @@
-use sqlx::{Pool, Postgres};
 use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
 use crate::config::AppConfig;
-use crate::model::jwt::{decode_jwt, JWTClaims};
+use crate::model::jwt::{decode_jwt};
 
 use crate::model::user::User;
 use crate::model::user_repository::{UserRepository, UserRepositoryError};
@@ -96,7 +95,7 @@ impl TokenService {
 
     pub async fn token_info(&self, access_token: &str) -> Result<TokenInfo, TokenServiceError> {
         let jwt_claims = decode_jwt(access_token, AppConfig::jwt_secret())?;
-        let user_uuid = Uuid::parse_str(&jwt_claims.sub).map_err(|e| TokenServiceError::InternalError)?;
+        let user_uuid = Uuid::parse_str(&jwt_claims.sub).map_err(|_| TokenServiceError::InternalError)?;
         let user = self.user_repository.get(&user_uuid).await?;
 
         Ok(TokenInfo {

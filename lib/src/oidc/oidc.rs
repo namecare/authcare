@@ -1,16 +1,12 @@
-use std::collections::HashMap;
-use std::error::Error;
 use chrono::{DateTime, Utc};
-use jsonwebtoken::jwk::JwkSet;
-use openidconnect::core::{CoreClient, CoreGenderClaim, CoreIdToken, CoreIdTokenClaims, CoreJsonWebKeyType, CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm, CoreProviderMetadata};
-use openidconnect::{ClaimsVerificationError, ClientId, EmptyAdditionalClaims, IdTokenClaims, IssuerUrl, Nonce, RedirectUrl};
-use openidconnect::reqwest::{async_http_client, http_client};
+use openidconnect::core::{CoreClient, CoreGenderClaim, CoreJsonWebKeyType, CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm, CoreProviderMetadata};
+use openidconnect::{ClaimsVerificationError, ClientId, IssuerUrl, Nonce};
+use openidconnect::reqwest::{async_http_client};
 use serde::{Deserialize, Serialize};
-use sqlx::encode::IsNull::No;
 use thiserror::Error;
 use std::str::FromStr;
 
-use crate::oidc::provider::{Claims, Email, UserProvidedData};
+use crate::oidc::provider::{UserProvidedData};
 use crate::oidc::provider::apple::parse_apple_id_token_claims;
 
 use crate::oidc::serde_string_bool;
@@ -51,7 +47,7 @@ impl OidcClient {
         let issuer_url = IssuerUrl::new(issuer_url.to_string()).expect("Invalid issuer URL");
 
         let provider_metadata = CoreProviderMetadata::discover_async(IssuerUrl::new(issuer_url.to_string()).expect("Expect"), async_http_client).await
-            .unwrap_or_else(|err| {
+            .unwrap_or_else(|_| {
                 panic!("Failed to discover OpenID Provider");
             });
 

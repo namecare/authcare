@@ -48,6 +48,7 @@ pub struct SignUpDTO {
 pub struct UserDTO {
     pub id: uuid::Uuid,
     pub email: String,
+    pub is_super_user: bool,
 }
 
 impl From<User> for UserDTO {
@@ -55,6 +56,7 @@ impl From<User> for UserDTO {
         Self {
             id: value.id,
             email: value.email.expect("Let's expect for now"),
+            is_super_user: value.is_super_user.unwrap_or(false)
         }
     }
 }
@@ -64,6 +66,7 @@ impl From<&User> for UserDTO {
         Self {
             id: value.id,
             email: value.email.clone().expect("Let's expect for now"),
+            is_super_user: value.is_super_user.unwrap_or(false)
         }
     }
 }

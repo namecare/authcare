@@ -1,8 +1,3 @@
-use crate::model::user::User;
-use crate::model::user_repository::{UserRepository, UserRepositoryError};
-use crate::service::auth_service::AuthServiceError;
-use crate::utils::crypto::hash_password;
-use sqlx::{Pool, Postgres};
 use std::sync::Arc;
 use thiserror::Error;
 use crate::model::session_repository::{SessionRepository, SessionRepositoryError};

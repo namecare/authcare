@@ -73,7 +73,7 @@ impl UserRepository for DbUserRepository {
     }
 
     async fn delete(&self, user_id: &uuid::Uuid) -> Result<(), UserRepositoryError> {
-        let deleted_rows = query!("DELETE FROM auth_user WHERE id = $1", user_id)
+        query!("DELETE FROM auth_user WHERE id = $1", user_id)
             .execute(&self.db)
             .await?;
 

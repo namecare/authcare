@@ -1,12 +1,8 @@
 use std::collections::HashMap;
 use crate::model::user::User;
 use crate::model::user_repository::{UserRepository, UserRepositoryError};
-use crate::service::auth_service::AuthServiceError;
 use crate::utils::crypto::hash_password;
-use sqlx::{Pool, Postgres};
 use std::sync::Arc;
-use serde_json::map::Values;
-use serde_json::Value;
 use thiserror::Error;
 use tokio::task;
 use crate::model::identity::Identity;
@@ -108,8 +104,6 @@ impl UserService {
                 todo!()
             }
         }
-
-        Err(UserServiceError::InvalidExternalIdentity)
     }
 
     pub async fn get_user(&self, id: &uuid::Uuid) -> Result<User, UserServiceError> {
@@ -143,6 +137,7 @@ enum AccountLinkingDecision {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct AccountLinkingResult {
     decision: AccountLinkingDecision,
     user: Option<User>,

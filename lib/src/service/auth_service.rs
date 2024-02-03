@@ -1,4 +1,3 @@
-use sqlx::{Pool, Postgres};
 use std::sync::Arc;
 
 use thiserror::Error;

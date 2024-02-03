@@ -48,14 +48,14 @@ impl OAuthProviderConfiguration {
     }
 }
 fn build_ouath_providers() -> HashMap<String, OAuthProviderConfiguration> {
-    let mut hashMap= HashMap::new();
+    let mut hash_map = HashMap::new();
 
     if let Ok(issuer) = std::env::var("OAUTH_APPLE_ISSUER") {
         let Ok(client_id) = std::env::var("OAUTH_APPLE_CLIENT_ID") else { panic!("Missing OAUTH_APPLE_CLIENT_ID env") };
-        hashMap.insert(issuer.clone(), OAuthProviderConfiguration::new(&issuer, &client_id));
+        hash_map.insert(issuer.clone(), OAuthProviderConfiguration::new(&issuer, &client_id));
     };
 
-    hashMap
+    hash_map
 }
 
 

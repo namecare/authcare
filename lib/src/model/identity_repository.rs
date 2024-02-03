@@ -76,7 +76,7 @@ impl IdentityRepository for DbIdentityRepository {
 
     async fn update(
         &self,
-        identity: Identity,
+        _identity: Identity,
     ) -> Result<Identity, IdentityRepositoryError> {
        todo!()
     }
