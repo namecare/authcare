@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 pub mod apple;
 
@@ -97,12 +97,12 @@ pub struct Claims {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserProvidedData {
     pub emails: Vec<Email>,
-    pub metadata: Option<Claims>
+    pub metadata: Option<Claims>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Email {
     pub email: String,
     pub verified: bool,
-    pub primary: bool
+    pub primary: bool,
 }

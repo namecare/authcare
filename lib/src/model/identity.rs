@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use crate::model::user::User;
+use crate::oidc::provider::UserProvidedData;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use sqlx::types::{JsonValue};
-use crate::model::user::User;
-use crate::oidc::provider::UserProvidedData;
+use sqlx::types::JsonValue;
+use std::collections::HashMap;
 
 #[allow(non_snake_case)]
 #[derive(Debug, Deserialize, sqlx::FromRow, Serialize, Clone)]
@@ -22,7 +22,10 @@ pub struct Identity {
 impl Identity {
     pub fn new(user: &User, provider: &str, identity_data: HashMap<String, Value>) -> Self {
         let provider_id = identity_data.get("sub").expect("Expect sub").to_string();
-        let email = identity_data.get("email").expect("Expect email").to_string();
+        let email = identity_data
+            .get("email")
+            .expect("Expect email")
+            .to_string();
 
         let mut map: Map<String, Value> = Map::new();
 
@@ -42,7 +45,11 @@ impl Identity {
         }
     }
 
-    pub fn new_from_provider(user: &User, provider: &str, provider_data: &UserProvidedData) -> Self {
+    pub fn new_from_provider(
+        user: &User,
+        provider: &str,
+        provider_data: &UserProvidedData,
+    ) -> Self {
         let meta = provider_data.metadata.as_ref().expect("Expect meta");
         let provider_id = meta.subject.as_ref().expect("Expect sub");
 

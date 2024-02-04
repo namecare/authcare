@@ -1,11 +1,11 @@
 pub mod access_token;
+pub mod identity;
+pub mod identity_repository;
 pub mod jwt;
 pub mod refresh_token;
 pub mod refresh_token_repository;
 pub mod session;
 pub mod session_repository;
+pub mod token_info;
 pub mod user;
 pub mod user_repository;
-pub mod identity;
-pub mod identity_repository;
-pub mod token_info;

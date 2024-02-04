@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sqlx::{PgPool, query, Row};
+use sqlx::{query, PgPool, Row};
 use thiserror::Error;
 
 use crate::model::user::User;

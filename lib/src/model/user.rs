@@ -75,7 +75,9 @@ impl User {
 impl User {
     pub fn authenticate(&self, password: &str) -> Result<bool, UserError> {
         let Some(pass) = &self.encrypted_password else {
-            return Err(UserError::AuthenticationFailed(AuthenticationFailedErrorReason::NoPassword));
+            return Err(UserError::AuthenticationFailed(
+                AuthenticationFailedErrorReason::NoPassword,
+            ));
         };
 
         Ok(compare_hash_and_password(pass.as_str(), password))

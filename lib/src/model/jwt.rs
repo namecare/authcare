@@ -38,10 +38,7 @@ pub fn encode_jwt(
 }
 
 /// Decode a json web token (JWT)
-pub fn decode_jwt(
-    token: &str,
-    secret: String,
-) -> Result<JWTClaims, jsonwebtoken::errors::Error> {
+pub fn decode_jwt(token: &str, secret: String) -> Result<JWTClaims, jsonwebtoken::errors::Error> {
     decode_jwt_with_validator(token, secret, &Validation::default())
 }
 

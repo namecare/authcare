@@ -1,13 +1,16 @@
 use chrono::{DateTime, Utc};
-use openidconnect::core::{CoreClient, CoreGenderClaim, CoreJsonWebKeyType, CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm, CoreProviderMetadata};
+use openidconnect::core::{
+    CoreClient, CoreGenderClaim, CoreJsonWebKeyType, CoreJweContentEncryptionAlgorithm,
+    CoreJwsSigningAlgorithm, CoreProviderMetadata,
+};
+use openidconnect::reqwest::async_http_client;
 use openidconnect::{ClaimsVerificationError, ClientId, IssuerUrl, Nonce};
-use openidconnect::reqwest::{async_http_client};
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use std::str::FromStr;
+use thiserror::Error;
 
-use crate::oidc::provider::{UserProvidedData};
 use crate::oidc::provider::apple::parse_apple_id_token_claims;
+use crate::oidc::provider::UserProvidedData;
 
 use crate::oidc::serde_string_bool;
 
@@ -17,12 +20,11 @@ pub enum OidcError {
     VerificationError(#[from] ClaimsVerificationError),
 
     #[error("Serialization error")]
-    SerdeJsonError(#[from] serde_json::Error)
+    SerdeJsonError(#[from] serde_json::Error),
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
 pub struct AdditionalClaims {
-
     #[serde(deserialize_with = "serde_string_bool::deserialize")]
     pub is_private_email: bool,
     pub auth_time: Option<DateTime<Utc>>,
@@ -39,17 +41,21 @@ pub type IdToken = openidconnect::IdToken<
 >;
 
 pub struct OidcClient {
-    client: CoreClient
+    client: CoreClient,
 }
 
 impl OidcClient {
     pub async fn new(issuer_url: &str, client_id: &str) -> OidcClient {
         let issuer_url = IssuerUrl::new(issuer_url.to_string()).expect("Invalid issuer URL");
 
-        let provider_metadata = CoreProviderMetadata::discover_async(IssuerUrl::new(issuer_url.to_string()).expect("Expect"), async_http_client).await
-            .unwrap_or_else(|_| {
-                panic!("Failed to discover OpenID Provider");
-            });
+        let provider_metadata = CoreProviderMetadata::discover_async(
+            IssuerUrl::new(issuer_url.to_string()).expect("Expect"),
+            async_http_client,
+        )
+        .await
+        .unwrap_or_else(|_| {
+            panic!("Failed to discover OpenID Provider");
+        });
 
         let client = CoreClient::from_provider_metadata(
             provider_metadata,
@@ -57,28 +63,27 @@ impl OidcClient {
             None,
         );
 
-        OidcClient {
-            client
-        }
+        OidcClient { client }
     }
 
     pub fn verify(&self, jwt: &str, nonce: Option<String>) -> Result<UserProvidedData, OidcError> {
         let verifier = self.client.id_token_verifier();
 
-        let nonce_verifier: Box<dyn FnOnce(Option<&Nonce>) -> Result<(), String>> = Box::new(|n: Option<&Nonce>| {
-            match nonce {
+        let nonce_verifier: Box<dyn FnOnce(Option<&Nonce>) -> Result<(), String>> =
+            Box::new(|n: Option<&Nonce>| match nonce {
                 None => Ok(()),
                 Some(nonce) => {
-                    let Some(n) = n else { return Err("missing nonce claim".to_string()); };
+                    let Some(n) = n else {
+                        return Err("missing nonce claim".to_string());
+                    };
 
                     if &Nonce::new(nonce) == n {
                         Ok(())
-                    }else{
+                    } else {
                         Err("nonce mismatch".to_string())
                     }
                 }
-            }
-        });
+            });
 
         let token = IdToken::from_str(jwt)?;
         let claims = token.claims(&verifier, nonce_verifier)?;
@@ -86,11 +91,10 @@ impl OidcClient {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use serde_json::{Map, Value};
     use super::*;
+    use serde_json::{Map, Value};
 
     #[tokio::test]
     fn test_verify_signature() {
@@ -126,6 +130,5 @@ mod tests {
                                 }"#;
 
         let client = oidc_client("https://appleid.apple.com", "app.namecare.ios");
-
     }
 }
