@@ -1,10 +1,10 @@
-use std::future::{Future};
-use std::pin::Pin;
+use crate::api::controller::ControllerError;
 use actix_web::{dev::Payload, FromRequest, HttpRequest};
-use actix_web_httpauth::extractors::bearer::{BearerAuth};
+use actix_web_httpauth::extractors::bearer::BearerAuth;
 use authcare::config::AppConfig;
 use authcare::model::jwt::{decode_jwt, JWTClaims};
-use crate::api::controller::ControllerError;
+use std::future::Future;
+use std::pin::Pin;
 
 pub struct JWTClaimsDTO(pub JWTClaims);
 

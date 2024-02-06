@@ -2,9 +2,6 @@
 
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
-use dotenv::dotenv;
-use sqlx::postgres::PgPoolOptions;
-use std::sync::Arc;
 use authcare::config::AppConfig;
 use authcare::model::identity_repository::DbIdentityRepository;
 use authcare::model::refresh_token_repository::DbRefreshTokenRepository;
@@ -14,6 +11,9 @@ use authcare::service::auth_service::AuthService;
 use authcare::service::session_service::SessionService;
 use authcare::service::token_service::TokenService;
 use authcare::service::user_serivce::UserService;
+use dotenv::dotenv;
+use sqlx::postgres::PgPoolOptions;
+use std::sync::Arc;
 
 mod api;
 
@@ -49,7 +49,7 @@ async fn main() -> std::io::Result<()> {
     let token_service = TokenService::new(
         refresh_token_repo.clone(),
         account_repo.clone(),
-        session_repo.clone()
+        session_repo.clone(),
     );
 
     let auth_service = AuthService::new(account_repo.clone());

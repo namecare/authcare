@@ -1,30 +1,36 @@
-use actix_web::{get, post, web, HttpResponse, Responder, ResponseError, HttpRequest, FromRequest, delete};
-use actix_web::web::Payload;
-use openidconnect::core::CoreClient;
-use openidconnect::Nonce;
-use thiserror::Error;
-use validator::Validate;
-use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use crate::api::dto::{
+    AccessTokenDTO, IdTokenGrantParams, PasswordGrantParams, RefreshTokenGrantParams, Response,
+    SignUpDTO, TokenGrantParams, TokenGrantType, TokenInfoDto, TokenInfoQueryDTO, TokenQueryDTO,
+};
+use crate::api::middleware::JWTClaimsDTO;
+use actix_web::{delete, get, post, web, HttpResponse, Responder, ResponseError};
 use authcare::config::AppConfig;
 use authcare::model::jwt::{encode_jwt, JWTClaims};
 use authcare::model::refresh_token::RefreshToken;
 use authcare::model::user::User;
-use authcare::oidc::oidc::OidcClient;
+use authcare::oidc::oidc::{OidcClient, OidcError};
 use authcare::service::auth_service::AuthService;
 use authcare::service::session_service::SessionService;
 use authcare::service::token_service::TokenService;
 use authcare::service::user_serivce::UserService;
-use crate::api::dto::{AccessTokenDTO, IdTokenGrantParams, PasswordGrantParams, RefreshTokenDTO, RefreshTokenGrantParams, Response, SignUpDTO, TokenGrantParams, TokenGrantType, TokenInfoDto, TokenInfoQueryDTO, TokenQueryDTO};
-use crate::api::middleware::JWTClaimsDTO;
+use thiserror::Error;
+use validator::Validate;
 
 #[derive(Error, Debug)]
 pub enum ControllerError {
     #[error("Internal JWT Extraction error")]
-    InternalJWTExtractionError(#[from] actix_web_httpauth::extractors::AuthenticationError<actix_web_httpauth::headers::www_authenticate::bearer::Bearer>),
+    InternalJWTExtractionError(
+        #[from]
+        actix_web_httpauth::extractors::AuthenticationError<
+            actix_web_httpauth::headers::www_authenticate::bearer::Bearer,
+        >,
+    ),
 
     #[error("Internal JWT error")]
     InternalJWTError(#[from] jsonwebtoken::errors::Error),
+
+    #[error("Internal JWT error")]
+    InternalOidcError(#[from] OidcError),
 }
 
 impl ResponseError for ControllerError {}
@@ -42,19 +48,19 @@ pub async fn signup_handler(
         }
     };
 
-    let Ok(user) = user_service.create_user(dto.email.clone(), dto.password.clone()).await else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+    let Ok(user) = user_service
+        .create_user(dto.email.clone(), dto.password.clone())
+        .await
+    else {
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     let Ok(refresh_token) = token_service.issue_refresh_token(&user).await else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     let Ok(access_token) = generate_access_token(&user, &refresh_token) else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     HttpResponse::Ok().json(access_token)
@@ -71,9 +77,15 @@ pub async fn token_handler(
     //TODO: Add rate limit
 
     match query.grant_type {
-        TokenGrantType::Password => return token_password_handler(dto.0.into(), auth_service, token_service).await,
-        TokenGrantType::RefreshToken => return token_refresh_handler(dto.0.into(), token_service, user_service).await,
-        TokenGrantType::IdToken => return id_token_handler(dto.0.into(), token_service, user_service).await,
+        TokenGrantType::Password => {
+            return token_password_handler(dto.0.into(), auth_service, token_service).await
+        }
+        TokenGrantType::RefreshToken => {
+            return token_refresh_handler(dto.0.into(), token_service, user_service).await
+        }
+        TokenGrantType::IdToken => {
+            return id_token_handler(dto.0.into(), token_service, user_service).await
+        }
     }
 }
 
@@ -82,11 +94,9 @@ pub async fn token_info_handler(
     query: web::Query<TokenInfoQueryDTO>,
     token_service: web::Data<TokenService>,
 ) -> impl Responder {
-
     let access_token = query.0.access_token;
     let Ok(token_info) = token_service.token_info(&access_token).await else {
-        return HttpResponse::Unauthorized()
-            .json(Response::fail("Invalid token".to_string() ));
+        return HttpResponse::Unauthorized().json(Response::fail("Invalid token".to_string()));
     };
 
     let dto: TokenInfoDto = token_info.into();
@@ -99,13 +109,11 @@ pub async fn signout_handler(
     claims: JWTClaimsDTO,
 ) -> impl Responder {
     let Ok(sid) = uuid::Uuid::parse_str(claims.0.sid.as_str()) else {
-        return HttpResponse::Unauthorized()
-            .json(Response::fail("Invalid JWT claims".to_string() ));
+        return HttpResponse::Unauthorized().json(Response::fail("Invalid JWT claims".to_string()));
     };
 
     let Ok(()) = session_service.revoke_session(&sid).await else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     HttpResponse::Ok().json(Response::success("Have a good one!"))
@@ -117,13 +125,11 @@ pub async fn delete_user_handler(
     claims: JWTClaimsDTO,
 ) -> impl Responder {
     let Ok(uid) = uuid::Uuid::parse_str(claims.0.sub.as_str()) else {
-        return HttpResponse::Unauthorized()
-            .json(Response::fail("Invalid JWT claims".to_string() ));
+        return HttpResponse::Unauthorized().json(Response::fail("Invalid JWT claims".to_string()));
     };
 
     let Ok(()) = user_service.delete_user(&uid).await else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     HttpResponse::Ok().json(Response::success("Have a good one!"))
@@ -148,17 +154,15 @@ async fn token_password_handler(
 
     let Ok(user) = auth_service.authenticate(email, password).await else {
         return HttpResponse::Unauthorized()
-            .json(Response::fail("Invalid Credentials".to_string()))
+            .json(Response::fail("Invalid Credentials".to_string()));
     };
 
     let Ok(refresh_token) = token_service.issue_refresh_token(&user).await else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     let Ok(access_token) = generate_access_token(&user, &refresh_token) else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     HttpResponse::Ok().json(access_token)
@@ -169,19 +173,19 @@ async fn token_refresh_handler(
     token_service: web::Data<TokenService>,
     user_service: web::Data<UserService>,
 ) -> HttpResponse {
-    let Ok(refresh_token) = token_service.swap_refresh_token(dto.refresh_token.as_str()).await else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+    let Ok(refresh_token) = token_service
+        .swap_refresh_token(dto.refresh_token.as_str())
+        .await
+    else {
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     let Ok(user) = user_service.get_user(&refresh_token.user_id).await else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     let Ok(access_token) = generate_access_token(&user, &refresh_token) else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     HttpResponse::Ok().json(access_token)
@@ -190,41 +194,50 @@ async fn token_refresh_handler(
 async fn id_token_handler(
     dto: IdTokenGrantParams,
     token_service: web::Data<TokenService>,
-    user_service: web::Data<UserService>
+    user_service: web::Data<UserService>,
 ) -> HttpResponse {
-
-    let provider = extract_provider(&dto).await.expect("Expect client");
-    let Ok(claims) = provider.verify(dto.token.as_str(), None) else {
-        return HttpResponse::Unauthorized()
-            .json(Response::fail("Invalid Credentials".to_string()))
+    let Ok(provider) = extract_provider(&dto).await else {
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
-    let Ok(user) = user_service.create_user_from_external_identity(&claims, &dto.provider).await else {
+    let Ok(claims) = provider.verify(dto.token.as_str(), None) else {
         return HttpResponse::Unauthorized()
-            .json(Response::fail("Invalid Credentials".to_string()))
+            .json(Response::fail("Invalid Credentials".to_string()));
+    };
+
+    let Ok(user) = user_service
+        .create_user_from_external_identity(&claims, dto.provider)
+        .await
+    else {
+        return HttpResponse::Unauthorized()
+            .json(Response::fail("Invalid Credentials".to_string()));
     };
 
     let Ok(refresh_token) = token_service.issue_refresh_token(&user).await else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     let Ok(access_token) = generate_access_token(&user, &refresh_token) else {
-        return HttpResponse::InternalServerError()
-            .json(Response::internal_error());
+        return HttpResponse::InternalServerError().json(Response::internal_error());
     };
 
     HttpResponse::Ok().json(access_token)
 }
 
 async fn extract_provider(dto: &IdTokenGrantParams) -> Result<OidcClient, ControllerError> {
-    if dto.provider == "apple" || dto.issuer == "https://appleid.apple.com" {
-        let externalConfiguration = AppConfig::provider_configuration(&dto.issuer);
-        let oid_client = OidcClient::new(externalConfiguration.issuer.as_str(), externalConfiguration.client_id.as_str()).await;
-        return Ok(oid_client);
-    }
+    let Some(external_configuration) = AppConfig::provider_configuration(&dto.provider) else {
+        return Err(ControllerError::InternalOidcError(OidcError::UnknownProvider))
+    };
 
-    panic!("We only support apple")
+    let provider_metadata = dto.provider.fetch_provider_metadata().await?;
+
+    let oid_client = OidcClient::new(
+        provider_metadata,
+        external_configuration.client_id.clone(),
+        external_configuration.secret.clone()
+    );
+
+    return Ok(oid_client);
 }
 
 fn generate_access_token(

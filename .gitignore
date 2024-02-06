@@ -96,3 +96,6 @@ lib/Cargo.lock
 
 # Environment Variables
 .env
+
+# Others
+**/*.http

@@ -1,10 +1,13 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 pub mod apple;
+pub mod google;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
+    // Reserved claims
+
     #[serde(rename = "iss")]
     pub issuer: Option<String>,
 
@@ -19,6 +22,8 @@ pub struct Claims {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub exp: Option<f64>,
+
+    // Default profile claims
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -54,7 +59,7 @@ pub struct Claims {
     pub birthdate: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub zoneinfo: Option<String>,
+    pub zone_info: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locale: Option<String>,
@@ -74,35 +79,21 @@ pub struct Claims {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phone_verified: Option<bool>,
 
+    /// Custom profile claims that are provider specific
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom_claims: Option<HashMap<String, serde_json::Value>>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub full_name: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub avatar_url: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub slug: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub provider_id: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub user_name: Option<String>,
 }
 
 /// Struct that contains the user's data returned from the oauth provider
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserProvidedData {
     pub emails: Vec<Email>,
-    pub metadata: Option<Claims>
+    pub metadata: Option<Claims>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Email {
     pub email: String,
     pub verified: bool,
-    pub primary: bool
+    pub primary: bool,
 }

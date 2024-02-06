@@ -1,5 +1,5 @@
-pub mod provider;
 pub mod oidc;
+pub mod provider;
 
 pub mod serde_string_bool {
     use serde::{de, Deserializer};
@@ -7,8 +7,8 @@ pub mod serde_string_bool {
     use std::fmt;
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<bool, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         struct BooleanLikeVisitor;
 
@@ -20,15 +20,15 @@ pub mod serde_string_bool {
             }
 
             fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
-                where
-                    E: de::Error,
+            where
+                E: de::Error,
             {
                 Ok(v)
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-                where
-                    E: de::Error,
+            where
+                E: de::Error,
             {
                 v.parse().map_err(E::custom)
             }

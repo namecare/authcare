@@ -1,4 +1,3 @@
-use sqlx::{Pool, Postgres};
 use std::sync::Arc;
 
 use thiserror::Error;
@@ -30,12 +29,8 @@ pub struct AuthService {
 }
 
 impl AuthService {
-    pub fn new(
-        account_repository: Arc<dyn UserRepository + Send + Sync + 'static>
-    ) -> Self {
-        AuthService {
-            account_repository
-        }
+    pub fn new(account_repository: Arc<dyn UserRepository + Send + Sync + 'static>) -> Self {
+        AuthService { account_repository }
     }
 
     pub async fn authenticate(
@@ -44,7 +39,7 @@ impl AuthService {
         password: String,
     ) -> Result<User, AuthServiceError> {
         let Ok(user) = self.account_repository.find_by_email(email.as_str()).await else {
-            return Err(AuthServiceError::AccountNotFound)
+            return Err(AuthServiceError::AccountNotFound);
         };
 
         use tokio::task;
@@ -59,7 +54,9 @@ impl AuthService {
             } else {
                 return Err(AuthServiceError::InvalidCredentials);
             }
-        }).await.expect("Expect complete")?;
+        })
+        .await
+        .expect("Expect complete")?;
 
         Ok(user)
     }

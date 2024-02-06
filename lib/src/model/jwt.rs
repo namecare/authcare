@@ -2,7 +2,7 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
-use crate::constants::{JWT_AUD_CLAIN, JWT_EXPIRED_IN, JWT_ISS_CLAIN};
+use crate::constants::{JWT_AUD_CLAIM, JWT_EXPIRED_IN, JWT_ISS_CLAIM};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JWTClaims {
@@ -18,10 +18,10 @@ impl JWTClaims {
     pub fn new(sub: String, sid: String) -> Self {
         let now = Utc::now();
         Self {
-            aud: JWT_AUD_CLAIN.to_string(),
+            aud: JWT_AUD_CLAIM.to_string(),
             exp: (now + Duration::minutes(JWT_EXPIRED_IN)).timestamp(),
             iat: now.timestamp(),
-            iss: JWT_ISS_CLAIN.to_string(),
+            iss: JWT_ISS_CLAIM.to_string(),
             sub,
             sid,
         }
@@ -38,10 +38,7 @@ pub fn encode_jwt(
 }
 
 /// Decode a json web token (JWT)
-pub fn decode_jwt(
-    token: &str,
-    secret: String,
-) -> Result<JWTClaims, jsonwebtoken::errors::Error> {
+pub fn decode_jwt(token: &str, secret: String) -> Result<JWTClaims, jsonwebtoken::errors::Error> {
     decode_jwt_with_validator(token, secret, &Validation::default())
 }
 

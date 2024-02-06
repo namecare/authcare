@@ -1,17 +1,16 @@
-use sqlx::{Pool, Postgres};
+use crate::config::AppConfig;
+use crate::model::jwt::decode_jwt;
 use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
-use crate::config::AppConfig;
-use crate::model::jwt::{decode_jwt, JWTClaims};
 
-use crate::model::user::User;
-use crate::model::user_repository::{UserRepository, UserRepositoryError};
 use crate::model::refresh_token::RefreshToken;
 use crate::model::refresh_token_repository::{RefreshTokenRepository, RefreshTokenRepositoryError};
 use crate::model::session::Session;
 use crate::model::session_repository::{SessionRepository, SessionRepositoryError};
 use crate::model::token_info::TokenInfo;
+use crate::model::user::User;
+use crate::model::user_repository::{UserRepository, UserRepositoryError};
 use crate::utils::crypto::random_secret_token;
 
 #[derive(Error, Debug)]
@@ -51,7 +50,7 @@ impl TokenService {
         Self {
             refresh_token_repository,
             user_repository,
-            session_repository
+            session_repository,
         }
     }
 
@@ -84,7 +83,7 @@ impl TokenService {
         let user_uuid = refresh_token.user_id;
         let user = self.user_repository.get(&user_uuid).await?;
 
-        //TODO: check whether the refresh_token is valid (Revoked). If revoked, check the expirational data (issue_at + lifetime). Issue new one if not expired
+        //TODO: check whether the refresh_token is valid (Revoked). If revoked, check the expiration data (issue_at + lifetime). Issue new one if not expired
         //TODO(feat):   check whether the user is banned or not
 
         let new_refresh_token = self.generate_refresh_token(user.id, refresh_token.session_id);
@@ -96,12 +95,13 @@ impl TokenService {
 
     pub async fn token_info(&self, access_token: &str) -> Result<TokenInfo, TokenServiceError> {
         let jwt_claims = decode_jwt(access_token, AppConfig::jwt_secret())?;
-        let user_uuid = Uuid::parse_str(&jwt_claims.sub).map_err(|e| TokenServiceError::InternalError)?;
+        let user_uuid =
+            Uuid::parse_str(&jwt_claims.sub).map_err(|_| TokenServiceError::InternalError)?;
         let user = self.user_repository.get(&user_uuid).await?;
 
         Ok(TokenInfo {
             jwt_claims,
-            user: user
+            user: user,
         })
     }
 

@@ -1,17 +1,14 @@
-use std::collections::HashMap;
-use crate::model::user::User;
-use crate::model::user_repository::{UserRepository, UserRepositoryError};
-use crate::service::auth_service::AuthServiceError;
-use crate::utils::crypto::hash_password;
-use sqlx::{Pool, Postgres};
-use std::sync::Arc;
-use serde_json::map::Values;
-use serde_json::Value;
-use thiserror::Error;
-use tokio::task;
 use crate::model::identity::Identity;
 use crate::model::identity_repository::{IdentityRepository, IdentityRepositoryError};
+use crate::model::user::User;
+use crate::model::user_repository::{UserRepository, UserRepositoryError};
 use crate::oidc::provider::UserProvidedData;
+use crate::utils::crypto::hash_password;
+use std::collections::HashMap;
+use std::sync::Arc;
+use thiserror::Error;
+use tokio::task;
+use crate::oidc::oidc::OidcProvider;
 
 #[derive(Error, Debug)]
 pub enum UserServiceError {
@@ -38,10 +35,13 @@ pub struct UserService {
 }
 
 impl UserService {
-    pub fn new(user_repository: Arc<dyn UserRepository + Send + Sync>, identity_repository: Arc<dyn IdentityRepository + Send + Sync>) -> Self {
+    pub fn new(
+        user_repository: Arc<dyn UserRepository + Send + Sync>,
+        identity_repository: Arc<dyn IdentityRepository + Send + Sync>,
+    ) -> Self {
         UserService {
             user_repository: user_repository.clone(),
-            identity_repository: identity_repository.clone()
+            identity_repository: identity_repository.clone(),
         }
     }
 
@@ -55,15 +55,18 @@ impl UserService {
             return Err(UserServiceError::UserExists);
         }
 
-        let hashed_password = task::spawn_blocking(move || {
-            hash_password(password.as_str())
-        }).await.expect("Expect hashed");
+        let hashed_password = task::spawn_blocking(move || hash_password(password.as_str()))
+            .await
+            .expect("Expect hashed");
 
         let user = User::new(email, hashed_password);
         let user = self.user_repository.add(user).await?;
         let identity_data: HashMap<String, serde_json::Value> = HashMap::from([
             ("sub".to_string(), user.id.to_string().into()),
-            ("email".to_string(), user.email.clone().expect("For now we explect email").into()),
+            (
+                "email".to_string(),
+                user.email.clone().expect("For now we explect email").into(),
+            ),
         ]);
 
         let idenity = Identity::new(&user, "email", identity_data);
@@ -72,7 +75,11 @@ impl UserService {
         Ok(user)
     }
 
-    pub async fn create_user_from_external_identity(&self, provider_data: &UserProvidedData, provider: &str) -> Result<User, UserServiceError> {
+    pub async fn create_user_from_external_identity(
+        &self,
+        provider_data: &UserProvidedData,
+        provider: OidcProvider,
+    ) -> Result<User, UserServiceError> {
         let Some(meta) = &provider_data.metadata else {
             return Err(UserServiceError::InvalidExternalIdentity);
         };
@@ -81,8 +88,16 @@ impl UserService {
             return Err(UserServiceError::InvalidExternalIdentity);
         };
 
-        let emails: Vec<String> = provider_data.emails.iter().map(|e| e.email.clone() ).collect();
-        let account_linking = self.determine_account_linking(provider, &sub, &emails).await?;
+        let provider = provider.name();
+
+        let emails: Vec<String> = provider_data
+            .emails
+            .iter()
+            .map(|e| e.email.clone())
+            .collect();
+        let account_linking = self
+            .determine_account_linking(provider, &sub, &emails)
+            .await?;
 
         match account_linking.decision {
             AccountLinkingDecision::AccountExists => {
@@ -90,7 +105,7 @@ impl UserService {
                     return Err(UserServiceError::InvalidExternalIdentity);
                 };
 
-                return Ok(user)
+                return Ok(user);
             }
             AccountLinkingDecision::CreateAccount => {
                 let user = User::new_from_provider(&emails[0]);
@@ -99,7 +114,7 @@ impl UserService {
                 let idenity = Identity::new_from_provider(&user, provider, provider_data);
                 self.identity_repository.add(&idenity).await?;
 
-                return Ok(user)
+                return Ok(user);
             }
             AccountLinkingDecision::LinkAccount => {
                 todo!()
@@ -108,8 +123,6 @@ impl UserService {
                 todo!()
             }
         }
-
-        Err(UserServiceError::InvalidExternalIdentity)
     }
 
     pub async fn get_user(&self, id: &uuid::Uuid) -> Result<User, UserServiceError> {
@@ -143,6 +156,7 @@ enum AccountLinkingDecision {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct AccountLinkingResult {
     decision: AccountLinkingDecision,
     user: Option<User>,
@@ -150,7 +164,12 @@ struct AccountLinkingResult {
 }
 
 impl UserService {
-    async fn determine_account_linking(&self, provider: &str, sub: &str, emails: &[String]) -> Result<AccountLinkingResult, UserServiceError> {
+    async fn determine_account_linking(
+        &self,
+        provider: &str,
+        sub: &str,
+        emails: &[String],
+    ) -> Result<AccountLinkingResult, UserServiceError> {
         let identity = self.identity_repository.find(&sub, provider).await;
 
         if let Ok(identity) = identity {
@@ -162,7 +181,7 @@ impl UserService {
                 user: Some(user),
                 identities: Some(vec![identity]),
             });
-        } else if let Err(err) = identity  {
+        } else if let Err(err) = identity {
             match &err {
                 IdentityRepositoryError::InternalDbError(e) => {
                     if !matches!(e, sqlx::error::Error::RowNotFound) {
@@ -214,7 +233,10 @@ impl UserService {
             }
         }
 
-        let user = self.user_repository.get(&linking_identities[0].user_id).await?;
+        let user = self
+            .user_repository
+            .get(&linking_identities[0].user_id)
+            .await?;
 
         Ok(AccountLinkingResult {
             decision: AccountLinkingDecision::LinkAccount,
