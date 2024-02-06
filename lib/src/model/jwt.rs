@@ -39,7 +39,11 @@ pub fn encode_jwt(
 
 /// Decode a json web token (JWT)
 pub fn decode_jwt(token: &str, secret: String) -> Result<JWTClaims, jsonwebtoken::errors::Error> {
-    decode_jwt_with_validator(token, secret, &Validation::default())
+    let mut validator = Validation::default();
+    validator.validate_aud = false;
+    validator.validate_nbf = false;
+
+    decode_jwt_with_validator(token, secret, &validator)
 }
 
 pub(crate) fn decode_jwt_with_validator(
@@ -48,5 +52,6 @@ pub(crate) fn decode_jwt_with_validator(
     validator: &Validation,
 ) -> Result<JWTClaims, jsonwebtoken::errors::Error> {
     let decoding_key = DecodingKey::from_secret(secret.as_bytes());
-    jsonwebtoken::decode::<JWTClaims>(token, &decoding_key, validator).map(|data| data.claims)
+    jsonwebtoken::decode::<JWTClaims>(token, &decoding_key, validator)
+        .map(|data| data.claims)
 }
