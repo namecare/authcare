@@ -5,6 +5,7 @@ use authcare::model::token_info::TokenInfo;
 use authcare::model::user::User;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+use authcare::oidc::oidc::OidcProvider;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
@@ -140,9 +141,8 @@ pub struct TokenGrantParams {
     pub refresh_token: Option<String>,
 
     // id token
-    pub client: Option<String>,
     pub token: Option<String>,
-    pub provider: Option<String>,
+    pub provider: Option<OidcProvider>,
     pub issuer: Option<String>,
 }
 
@@ -178,19 +178,15 @@ impl From<TokenGrantParams> for RefreshTokenGrantParams {
 #[derive(Debug, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct IdTokenGrantParams {
-    pub client: String,
     pub token: String,
-    pub provider: String,
-    pub issuer: String,
+    pub provider: OidcProvider,
 }
 
 impl From<TokenGrantParams> for IdTokenGrantParams {
     fn from(value: TokenGrantParams) -> Self {
         Self {
-            client: value.client.expect("Expect clien"),
             token: value.token.expect("Expect token"),
             provider: value.provider.expect("Expect provider"),
-            issuer: value.issuer.expect("Expect issuer"),
         }
     }
 }

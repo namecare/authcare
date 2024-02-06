@@ -8,7 +8,7 @@ use authcare::config::AppConfig;
 use authcare::model::jwt::{encode_jwt, JWTClaims};
 use authcare::model::refresh_token::RefreshToken;
 use authcare::model::user::User;
-use authcare::oidc::oidc::OidcClient;
+use authcare::oidc::oidc::{OidcClient, OidcError};
 use authcare::service::auth_service::AuthService;
 use authcare::service::session_service::SessionService;
 use authcare::service::token_service::TokenService;
@@ -28,6 +28,9 @@ pub enum ControllerError {
 
     #[error("Internal JWT error")]
     InternalJWTError(#[from] jsonwebtoken::errors::Error),
+
+    #[error("Internal JWT error")]
+    InternalOidcError(#[from] OidcError),
 }
 
 impl ResponseError for ControllerError {}
@@ -203,7 +206,7 @@ async fn id_token_handler(
     };
 
     let Ok(user) = user_service
-        .create_user_from_external_identity(&claims, &dto.provider)
+        .create_user_from_external_identity(&claims, dto.provider)
         .await
     else {
         return HttpResponse::Unauthorized()
@@ -222,17 +225,19 @@ async fn id_token_handler(
 }
 
 async fn extract_provider(dto: &IdTokenGrantParams) -> Result<OidcClient, ControllerError> {
-    if dto.provider == "apple" || dto.issuer == "https://appleid.apple.com" {
-        let external_configuration = AppConfig::provider_configuration(&dto.issuer);
-        let oid_client = OidcClient::new(
-            external_configuration.issuer.as_str(),
-            external_configuration.client_id.as_str(),
-        )
-        .await;
-        return Ok(oid_client);
-    }
+    let Some(external_configuration) = AppConfig::provider_configuration(&dto.provider) else {
+        return Err(ControllerError::InternalOidcError(OidcError::UnknownProvider))
+    };
 
-    panic!("We only support apple")
+    let provider_metadata = dto.provider.fetch_provider_metadata().await?;
+
+    let oid_client = OidcClient::new(
+        provider_metadata,
+        external_configuration.client_id.clone(),
+        external_configuration.secret.clone()
+    );
+
+    return Ok(oid_client);
 }
 
 fn generate_access_token(

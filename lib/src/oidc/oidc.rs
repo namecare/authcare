@@ -1,18 +1,14 @@
-use chrono::{DateTime, Utc};
-use openidconnect::core::{
-    CoreClient, CoreGenderClaim, CoreJsonWebKeyType, CoreJweContentEncryptionAlgorithm,
-    CoreJwsSigningAlgorithm, CoreProviderMetadata,
-};
+use openidconnect::core::{CoreClient, CoreIdTokenVerifier, CoreProviderMetadata};
 use openidconnect::reqwest::async_http_client;
-use openidconnect::{ClaimsVerificationError, ClientId, IssuerUrl, Nonce};
+use openidconnect::{ClaimsVerificationError, ClientId, ClientSecret, IssuerUrl, Nonce};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 use thiserror::Error;
+use crate::oidc::provider::apple::{ISSUER_APPLE, parse_apple_id_token_claims};
 
-use crate::oidc::provider::apple::parse_apple_id_token_claims;
+use crate::oidc::provider::google::{ISSUER_GOOGLE, parse_google_id_token_claims};
 use crate::oidc::provider::UserProvidedData;
 
-use crate::oidc::serde_string_bool;
+
 
 #[derive(Error, Debug)]
 pub enum OidcError {
@@ -21,53 +17,84 @@ pub enum OidcError {
 
     #[error("Serialization error")]
     SerdeJsonError(#[from] serde_json::Error),
+
+    #[error("DiscoveryError")]
+    DiscoveryError,
+
+    #[error("UnknownProvider")]
+    UnknownProvider,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
-pub struct AdditionalClaims {
-    #[serde(deserialize_with = "serde_string_bool::deserialize")]
-    pub is_private_email: bool,
-    pub auth_time: Option<DateTime<Utc>>,
+#[derive(Debug, Clone, Deserialize, Serialize, Hash, PartialEq, Eq)]
+pub enum OidcProvider {
+    #[serde(rename = "apple")]
+    Apple,
+
+    #[serde(rename = "google")]
+    Google
 }
 
-impl openidconnect::AdditionalClaims for AdditionalClaims {}
+impl OidcProvider {
+    pub fn issuer_url(&self) -> &'static str {
+        match self {
+            OidcProvider::Apple => return ISSUER_APPLE,
+            OidcProvider::Google => return ISSUER_GOOGLE
+        }
+    }
 
-pub type IdToken = openidconnect::IdToken<
-    AdditionalClaims,
-    CoreGenderClaim,
-    CoreJweContentEncryptionAlgorithm,
-    CoreJwsSigningAlgorithm,
-    CoreJsonWebKeyType,
->;
+    pub async fn fetch_provider_metadata(&self) -> Result<CoreProviderMetadata, OidcError> {
+        let issuer_url = self.issuer_url();
+        Self::discover_provider_metadata(issuer_url).await
+    }
 
+    async fn discover_provider_metadata(issuer_url: &str) -> Result<CoreProviderMetadata, OidcError> {
+        let Ok(issuer_url) = IssuerUrl::new(issuer_url.to_string()) else {
+            return Err(OidcError::DiscoveryError)
+        };
+
+        let Ok(provider_metadata) = CoreProviderMetadata::discover_async(
+            IssuerUrl::new(issuer_url.to_string()).expect("Expect"),
+            async_http_client,
+        ).await else {
+            return Err(OidcError::DiscoveryError)
+        };
+
+        Ok(provider_metadata)
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            OidcProvider::Apple => return "apple",
+            OidcProvider::Google => return "google"
+        }
+    }
+}
 pub struct OidcClient {
     client: CoreClient,
+    issuer_url: String
 }
 
 impl OidcClient {
-    pub async fn new(issuer_url: &str, client_id: &str) -> OidcClient {
-        let issuer_url = IssuerUrl::new(issuer_url.to_string()).expect("Invalid issuer URL");
-
-        let provider_metadata = CoreProviderMetadata::discover_async(
-            IssuerUrl::new(issuer_url.to_string()).expect("Expect"),
-            async_http_client,
-        )
-        .await
-        .unwrap_or_else(|_| {
-            panic!("Failed to discover OpenID Provider");
-        });
+    pub fn new(provider_metadata: CoreProviderMetadata, client_id: String, secret: Option<String>) -> OidcClient {
+        let secret = secret.map(| v| ClientSecret::new(v));
+        let client_id = ClientId::new(client_id);
+        let issuer_url = provider_metadata.issuer().to_string();
 
         let client = CoreClient::from_provider_metadata(
             provider_metadata,
-            ClientId::new(client_id.to_string()),
-            None,
+            client_id,
+            secret,
         );
 
-        OidcClient { client }
+        OidcClient {
+            client,
+            issuer_url
+        }
     }
 
     pub fn verify(&self, jwt: &str, nonce: Option<String>) -> Result<UserProvidedData, OidcError> {
-        let verifier = self.client.id_token_verifier();
+        let issuer = self.issuer_url.as_str();
+        let verifier: CoreIdTokenVerifier = self.client.id_token_verifier();
 
         let nonce_verifier: Box<dyn FnOnce(Option<&Nonce>) -> Result<(), String>> =
             Box::new(|n: Option<&Nonce>| match nonce {
@@ -85,9 +112,13 @@ impl OidcClient {
                 }
             });
 
-        let token = IdToken::from_str(jwt)?;
-        let claims = token.claims(&verifier, nonce_verifier)?;
-        Ok(parse_apple_id_token_claims(&claims)?)
+        let user_provided_data = match issuer {
+            ISSUER_GOOGLE => parse_google_id_token_claims(&verifier, nonce_verifier, jwt)?,
+            ISSUER_APPLE => parse_apple_id_token_claims(&verifier, nonce_verifier, jwt)?,
+            _ => return Err(OidcError::UnknownProvider)
+        };
+
+        Ok(user_provided_data)
     }
 }
 

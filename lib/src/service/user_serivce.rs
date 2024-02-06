@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::task;
+use crate::oidc::oidc::OidcProvider;
 
 #[derive(Error, Debug)]
 pub enum UserServiceError {
@@ -77,7 +78,7 @@ impl UserService {
     pub async fn create_user_from_external_identity(
         &self,
         provider_data: &UserProvidedData,
-        provider: &str,
+        provider: OidcProvider,
     ) -> Result<User, UserServiceError> {
         let Some(meta) = &provider_data.metadata else {
             return Err(UserServiceError::InvalidExternalIdentity);
@@ -86,6 +87,8 @@ impl UserService {
         let Some(sub) = &meta.subject else {
             return Err(UserServiceError::InvalidExternalIdentity);
         };
+
+        let provider = provider.name();
 
         let emails: Vec<String> = provider_data
             .emails
